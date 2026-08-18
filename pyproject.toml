@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anarchi-kiln"
+version = "0.1.1"
+description = "Deterministic destructive software testing, reconstruction, fracture analysis, and constructive redesign."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "AnarchI Technologies" }
+]
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/AnarchI-Technologies-MAIN/kiln"
+
+[project.scripts]
+kiln = "engine.cli:main"
+
+[tool.setuptools]
+packages = ["engine"]

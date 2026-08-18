@@ -73,3 +73,6 @@ registry/pressure/kiln-pressure-readiness-001.csv
 registry/pressure/kiln-pressure-results-001.csv
 registry/pressure/kiln-pressure-semantics-001.csv
 registry/pressure/kiln-staleness-pressure-results-001.csv
+
+# Python packaging metadata
+*.egg-info/
