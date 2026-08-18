@@ -13,7 +13,7 @@ class KilnCliTests(unittest.TestCase):
     def test_version_surface(self):
         self.assertEqual(
             VERSION,
-            "0.1.1",
+            "0.1.2",
         )
 
     def test_parser_exposes_full_cycle_surface(self):
