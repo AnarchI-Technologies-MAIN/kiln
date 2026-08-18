@@ -17,6 +17,7 @@ from engine.mutation_executor import (
     MutationCandidate,
     file_hash,
     mutation_identity,
+    mutation_source_files,
     discover_python_mutations,
 )
 
@@ -128,12 +129,17 @@ def discover_text_mutations(
     root = Path(root).resolve()
     candidates = []
 
-    files = sorted(
+    files = tuple(
         path
-        for path in root.rglob("*")
-        if path.is_file()
-        and path.suffix.lower() in extensions
-        and not excluded_source(
+        for path in mutation_source_files(
+            root,
+            tuple(
+                sorted(
+                    extensions
+                )
+            ),
+        )
+        if not excluded_source(
             root,
             path,
         )

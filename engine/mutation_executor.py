@@ -5,6 +5,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Tuple
 import io
+import subprocess
 import tokenize
 
 
@@ -75,19 +76,96 @@ def mutation_identity(
     )
 
 
+def mutation_source_files(
+    root: Path,
+    extensions: Tuple[str, ...],
+) -> Tuple[Path, ...]:
+    root = Path(root).resolve()
+
+    git_dir = (
+        root
+        / ".git"
+    )
+
+    if git_dir.exists():
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(root),
+                "ls-files",
+                "-z",
+            ],
+            capture_output=True,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            raise RuntimeError(
+                "unable to enumerate tracked mutation sources"
+            )
+
+        paths = []
+
+        for raw in result.stdout.split(b"\0"):
+            if not raw:
+                continue
+
+            relative = raw.decode(
+                "utf-8",
+                errors="surrogateescape",
+            )
+
+            path = (
+                root
+                / relative
+            ).resolve()
+
+            if not path.is_file():
+                continue
+
+            if path.suffix.lower() not in extensions:
+                continue
+
+            paths.append(
+                path
+            )
+
+        return tuple(
+            sorted(
+                paths
+            )
+        )
+
+    return tuple(
+        sorted(
+            path
+            for path in root.rglob("*")
+            if path.is_file()
+            and path.suffix.lower() in extensions
+            and ".git" not in path.parts
+            and "__pycache__" not in path.parts
+        )
+    )
+
+
 def discover_python_mutations(
     root: Path,
 ) -> Tuple[MutationCandidate, ...]:
     root = Path(root).resolve()
     candidates = []
 
-    files = sorted(
+    files = tuple(
         path
-        for path in root.rglob("*.py")
-        if ".git" not in path.parts
-        and "__pycache__" not in path.parts
-        and "tests" not in path.parts
-        and not path.name.startswith("test_")
+        for path in mutation_source_files(
+            root,
+            (".py",),
+        )
+        if "tests" not in {
+            part.lower()
+            for part in path.relative_to(root).parts
+        }
+        and not path.name.lower().startswith("test_")
     )
 
     for path in files:
