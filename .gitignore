@@ -1,0 +1,75 @@
+# Python runtime artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# JavaScript/runtime artifacts
+node_modules/
+dist/
+build/
+
+# Kiln operational state
+sessions/
+training/
+kiln-staging/
+trial-output/
+release-output/
+
+# Environment and secret-bearing files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Non-canonical Kiln registry history
+registry/misc/
+registry/repairs/
+registry/fractures/
+registry/promotions/
+registry/checkpoints/
+registry/recovery/
+
+# Historical/non-canonical registry variants
+registry/library-index/kiln-annotations-002.csv
+registry/library-index/kiln-annotations-003.csv
+registry/planning/kiln-execution-plans-001.csv
+registry/authorization/kiln-injector-proof-authorization-001.csv
+registry/baseline/kiln-baseline-execution-set-001.csv
+registry/baseline/kiln-baseline-preflight-001.csv
+registry/baseline/kiln-baseline-results-001.csv
+registry/pressure/kiln-pressure-candidate-index-001.csv
+registry/pressure/kiln-pressure-ladders-001.csv
+
+# Historical audit material
+registry/audit/*
+!registry/audit/canonical-core-ledger-20260817-230153/
+registry/audit/canonical-core-ledger-20260817-230153/*
+!registry/audit/canonical-core-ledger-20260817-230153/kiln-canonical-core-ledger-001.csv
+!registry/audit/canonical-core-ledger-20260817-230153/kiln-canonical-core-dependency-ledger-001.csv
+
+# Non-canonical baseline doctrine/evidence
+registry/baseline/KILN-BASELINE-EXECUTION-PLAN-001.md
+registry/baseline/KILN-BASELINE-FRACTURE-ADJUDICATION-001.md
+registry/baseline/KILN-BASELINE-PREFLIGHT-001.md
+
+# Non-canonical pressure doctrine/evidence
+registry/pressure/kiln-attack-surface-index-001.csv
+registry/pressure/kiln-concurrent-pressure-results-001.csv
+registry/pressure/kiln-pressure-authorization-readiness-001.csv
+registry/pressure/KILN-PRESSURE-PROFILE-CONSTRUCTION-001.md
+registry/pressure/kiln-pressure-profiles-001.csv
+registry/pressure/kiln-pressure-readiness-001.csv
+registry/pressure/kiln-pressure-results-001.csv
+registry/pressure/kiln-pressure-semantics-001.csv
+registry/pressure/kiln-staleness-pressure-results-001.csv

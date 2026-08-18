@@ -1,0 +1,13 @@
+occurrence_id,profile_id,execution_id,attack_surface,confidence,evidence_ref
+ANARCHI-TEST-OCC-A1C0D35A5257C6CE,KILN-PROFILE-0001,KILN-EXEC-001123,authority-conflict,NONE,kiln-attack-surface-index-001.csv#row-2
+ANARCHI-TEST-OCC-A1C0D35A5257C6CE,KILN-PROFILE-0001,KILN-EXEC-001123,filesystem-state,NONE,kiln-attack-surface-index-001.csv#row-3
+ANARCHI-TEST-OCC-D816572272F35F93,KILN-PROFILE-0002,KILN-EXEC-001127,authority-conflict,NONE,kiln-attack-surface-index-001.csv#row-4
+ANARCHI-TEST-OCC-080DFCC669DF08DF,KILN-PROFILE-0003,KILN-EXEC-001394,authority-conflict,NONE,kiln-attack-surface-index-001.csv#row-5
+ANARCHI-TEST-OCC-080DFCC669DF08DF,KILN-PROFILE-0003,KILN-EXEC-001394,filesystem-state,NONE,kiln-attack-surface-index-001.csv#row-6
+ANARCHI-TEST-OCC-648824070FD0130D,KILN-PROFILE-0004,KILN-EXEC-001645,authority-conflict,NONE,kiln-attack-surface-index-001.csv#row-7
+ANARCHI-TEST-OCC-755A69D4C4E8B3D5,KILN-PROFILE-0006,KILN-EXEC-002498,authority-conflict,NONE,kiln-attack-surface-index-001.csv#row-8
+ANARCHI-TEST-OCC-755A69D4C4E8B3D5,KILN-PROFILE-0006,KILN-EXEC-002498,filesystem-state,NONE,kiln-attack-surface-index-001.csv#row-9
+ANARCHI-TEST-OCC-9FC51E3CFDD397D8,KILN-PROFILE-0008,KILN-EXEC-002966,authority-conflict,NONE,kiln-attack-surface-index-001.csv#row-10
+ANARCHI-TEST-OCC-9FC51E3CFDD397D8,KILN-PROFILE-0008,KILN-EXEC-002966,filesystem-state,NONE,kiln-attack-surface-index-001.csv#row-11
+ANARCHI-TEST-OCC-93CB4899C5FE0C35,KILN-PROFILE-0009,KILN-EXEC-003067,load,NONE,kiln-attack-surface-index-001.csv#row-12
+ANARCHI-TEST-OCC-93CB4899C5FE0C35,KILN-PROFILE-0009,KILN-EXEC-003067,state-staleness,NONE,kiln-attack-surface-index-001.csv#row-13

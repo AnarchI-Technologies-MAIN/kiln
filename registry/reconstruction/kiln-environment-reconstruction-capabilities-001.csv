@@ -1,0 +1,6 @@
+capability,available,executable,disposition
+python,true,C:\Users\alexg\AppData\Local\Programs\Python\Python312\python.exe,RECONSTRUCTION_BACKEND_AVAILABLE
+javascript-typescript,true,C:\Program Files\nodejs\node.exe,RECONSTRUCTION_BACKEND_AVAILABLE
+powershell,true,C:\Program Files\WindowsApps\Microsoft.PowerShell_7.6.5.0_x64__8wekyb3d8bbwe\pwsh.exe,RECONSTRUCTION_BACKEND_AVAILABLE
+linux-wsl2,true,C:\Windows\System32\wsl.exe,RECONSTRUCTION_BACKEND_AVAILABLE
+api-service,true,python-stdlib-http,RECONSTRUCTION_BACKEND_AVAILABLE

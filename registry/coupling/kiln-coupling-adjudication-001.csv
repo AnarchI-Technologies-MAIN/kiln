@@ -1,0 +1,2 @@
+plan_id,coupling_id,disposition,pressure_eligible,repair_authorized
+KILN-PLAN-9FE420DBC30A6820,KILN-COUPLING-F823BDECCE946B2C,PROVEN_COUPLING,true,false

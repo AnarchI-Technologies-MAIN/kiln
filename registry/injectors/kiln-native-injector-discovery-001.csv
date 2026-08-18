@@ -1,0 +1,12 @@
+plan_id,attack_surface,repository_path,carrier_terms,carrier_line_count,disposition,injector_proof_authorized
+KILN-PLAN-01A4C38C17886060,authority-conflict,tests\test_manifest.py,,0,NO_NATIVE_CARRIER_FOUND,false
+KILN-PLAN-0D8F1986E5D22E19,authority-conflict,tests\test_manifest.py,,0,NO_NATIVE_CARRIER_FOUND,false
+KILN-PLAN-19927831C09081DF,authority-conflict,tests\test_subscription.py,,0,NO_NATIVE_CARRIER_FOUND,false
+KILN-PLAN-58D7BE889E4FCB3B,authority-conflict,tests\test_manifest.py,,0,NO_NATIVE_CARRIER_FOUND,false
+KILN-PLAN-7CCDDB68BA00A695,authority-conflict,tests\test_validation.py,,0,NO_NATIVE_CARRIER_FOUND,false
+KILN-PLAN-C360353061CE36F2,authority-conflict,tests\test_manifest.py,,0,NO_NATIVE_CARRIER_FOUND,false
+KILN-PLAN-1C05F500950E90F9,filesystem-state,tests\test_manifest.py,path,2,NATIVE_CARRIER_CANDIDATE,false
+KILN-PLAN-5E01B13FD073E708,filesystem-state,tests\test_manifest.py,path,2,NATIVE_CARRIER_CANDIDATE,false
+KILN-PLAN-871645DC317B673C,filesystem-state,tests\test_manifest.py,path,2,NATIVE_CARRIER_CANDIDATE,false
+KILN-PLAN-BB2BD90172D68C64,filesystem-state,tests\test_manifest.py,file;path,2,NATIVE_CARRIER_CANDIDATE,false
+KILN-PLAN-8C21E11E7BAC2CA5,state-staleness,tests\test_report.py,,0,NO_NATIVE_CARRIER_FOUND,false

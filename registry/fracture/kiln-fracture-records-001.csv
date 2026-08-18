@@ -1,0 +1,1 @@
+fracture_id,plan_id,occurrence_id,content_id,source_commit,attack_surface,fracture_level,highest_survived_level,baseline_proven,coupling_proven,recovery_proven,repair_authorized

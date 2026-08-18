@@ -1,0 +1,2 @@
+plan_id,attack_surface,disposition,highest_proven_level,baseline_proven,coupling_proven,fracture_count,repair_authorized
+KILN-PLAN-9FE420DBC30A6820,load,LOAD_PRESSURE_ENVELOPE_PROVEN,16x,true,true,0,false

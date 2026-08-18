@@ -1,0 +1,2 @@
+capability,supported_roles,source_mutation,disposition
+behavioral-fragment-provenance,ACTION;ASSERTION;CLEANUP;FIXTURE;INJECTION;OBSERVATION;SETUP;UNKNOWN,false,SUBSTRATE_PROVEN

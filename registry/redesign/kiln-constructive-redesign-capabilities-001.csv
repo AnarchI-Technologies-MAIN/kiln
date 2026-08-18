@@ -1,0 +1,10 @@
+capability,disposition
+staging,PROVEN
+adjudication,PROVEN
+contamination-gate,PROVEN
+promotion-preflight,PROVEN
+soft-rollback,PROVEN
+hard-rollback,PROVEN
+git-promotion,PROVEN
+remote-verification,PROVEN
+verified-registry-closure,PROVEN

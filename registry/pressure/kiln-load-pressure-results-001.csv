@@ -1,0 +1,6 @@
+plan_id,contract_id,attack_surface,pressure_level,requested_runs,passed_runs,survived,worktree_removed,original_head_preserved
+KILN-PLAN-9FE420DBC30A6820,KILN-PRESSURE-EF348AA3FC729326,load,1x,1,1,true,true,true
+KILN-PLAN-9FE420DBC30A6820,KILN-PRESSURE-EF348AA3FC729326,load,2x,2,2,true,true,true
+KILN-PLAN-9FE420DBC30A6820,KILN-PRESSURE-EF348AA3FC729326,load,4x,4,4,true,true,true
+KILN-PLAN-9FE420DBC30A6820,KILN-PRESSURE-EF348AA3FC729326,load,8x,8,8,true,true,true
+KILN-PLAN-9FE420DBC30A6820,KILN-PRESSURE-EF348AA3FC729326,load,16x,16,16,true,true,true

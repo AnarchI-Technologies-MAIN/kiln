@@ -1,0 +1,2 @@
+plan_id,contract_id,disposition,highest_survived_level,fracture_level,fracture_observed,repair_authorized
+KILN-PLAN-9FE420DBC30A6820,KILN-PRESSURE-EF348AA3FC729326,PRESSURE_ENVELOPE_SURVIVED,16x,,false,false

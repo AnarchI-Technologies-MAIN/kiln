@@ -1,0 +1,2 @@
+capability,supported_states,synthesis_authorized,execution_authorized,disposition
+synthetic-contract-substrate,BLOCKED;EVIDENCE_SUFFICIENT_FOR_SYNTHESIS;PARTIALLY_SUPPORTED;PROPOSED,false,false,SUBSTRATE_PROVEN

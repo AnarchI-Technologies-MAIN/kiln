@@ -1,0 +1,5 @@
+attack_surface,pressure_contract_count,coupled_contract_count,proven_campaign_count,readiness,injector_discovery_authorized
+load,1,1,1,PROVEN,false
+state-staleness,1,1,0,CONTRACT_ONLY,true
+authority-conflict,6,6,0,CONTRACT_ONLY,true
+filesystem-state,4,4,0,CONTRACT_ONLY,true

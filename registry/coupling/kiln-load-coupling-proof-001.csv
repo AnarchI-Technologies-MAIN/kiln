@@ -1,0 +1,2 @@
+plan_id,coupling_id,source_commit,baseline_invocations,pressured_invocations,baseline_passed,pressured_passed,coupling_proven,resilience_proven,worktree_removed,original_head_preserved
+KILN-PLAN-9FE420DBC30A6820,KILN-COUPLING-F823BDECCE946B2C,50b8826d043b48fa76700a36bfa3d654364bba07,1,2,true,2,true,false,true,true
