@@ -8,7 +8,7 @@ Kiln identifies a Git-backed target, materializes disposable specimens, establis
 
 From a wheel:
 
-    pip install anarchi_kiln-0.1.2-py3-none-any.whl
+    pip install anarchi_kiln-0.1.3-py3-none-any.whl
 
 From Git:
 
@@ -29,7 +29,7 @@ Destructive mutation cycles require explicit authorization:
 
     kiln cycle TARGET --adapter python --entry tests --destructive --max-passes 8 --until fracture --json
 
-Supported v0.1.2 destructive-cycle adapters:
+Supported v0.1.3 destructive-cycle adapters:
 
 - Python
 - JavaScript / TypeScript
@@ -48,3 +48,5 @@ v0.1.0 is the immutable 33-core canonical architecture freeze and Kiln's first s
 v0.1.1 adds the installable package, full CLI surface, five destructive-cycle adapters, session evidence, compatibility graph materialization, behavioral fragments, synthetic contracts, and Core 030-backed redesign/promotion surfaces.
 
 v0.1.2 fixes Git-backed mutation discovery so only tracked source files participate in deterministic mutation selection.
+
+v0.1.3 adds deterministic baseline snapshots and semantic evidence digests for reproducible cross-specimen and cross-run generation comparison while preserving the historical regression furnace.
