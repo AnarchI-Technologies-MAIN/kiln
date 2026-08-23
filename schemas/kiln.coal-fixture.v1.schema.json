@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anarchi.invalid/schemas/kiln.coal-fixture.v1.schema.json",
+  "title": "Kiln coal-house conformance fixture",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "adapter", "entry", "failureOutput", "files"],
+  "properties": {
+    "schema": { "const": "kiln.coal-fixture.v1" },
+    "adapter": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]{0,63}$"
+    },
+    "entry": { "type": "string" },
+    "failureOutput": { "type": "string", "minLength": 1 },
+    "files": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+      },
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

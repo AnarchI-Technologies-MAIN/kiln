@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anarchi.invalid/schemas/kiln.coal-venv.v1.schema.json",
+  "title": "Kiln specimen-local environment adapter",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "adapter", "directories", "environment"],
+  "properties": {
+    "schema": { "const": "kiln.coal-venv.v1" },
+    "adapter": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]{0,63}$"
+    },
+    "directories": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+      }
+    },
+    "environment": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^(?![Kk][Ii][Ll][Nn]_)[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

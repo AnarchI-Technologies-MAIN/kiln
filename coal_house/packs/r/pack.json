@@ -1,0 +1,23 @@
+{
+  "adapter": "r",
+  "buildSystems": [
+    "r-source"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "DESCRIPTION",
+    "renv.lock"
+  ],
+  "runtimeProbes": [
+    [
+      "Rscript",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "rscript"
+  ],
+  "venvAdapter": "r-library"
+}

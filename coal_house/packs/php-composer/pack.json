@@ -1,0 +1,27 @@
+{
+  "adapter": "php-composer",
+  "buildSystems": [
+    "composer"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "composer.json",
+    "composer.lock"
+  ],
+  "runtimeProbes": [
+    [
+      "composer",
+      "--version"
+    ],
+    [
+      "php",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "php-script"
+  ],
+  "venvAdapter": "php-composer"
+}

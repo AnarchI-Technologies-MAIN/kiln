@@ -1,0 +1,61 @@
+{
+  "adapter": "dart",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "none",
+    "environment": {
+      "PUB_CACHE": "{specimen}/.pub-cache"
+    },
+    "rebuildCommands": [
+      [
+        "dart",
+        "pub",
+        "get"
+      ]
+    ],
+    "testCommand": [
+      "dart",
+      "run",
+      "tests/gate_test.dart"
+    ]
+  },
+  "languages": [
+    "dart"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "DART_TOKEN_REPLACEMENT",
+        "pattern": "\\bfalse\\b|\\btrue\\b|!=|==|&&|\\|\\|",
+        "replacements": {
+          "!=": "==",
+          "&&": "||",
+          "==": "!=",
+          "false": "true",
+          "true": "false",
+          "||": "&&"
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bassert\\s*\\("
+    ],
+    "locationPatterns": [
+      "FAIL (?P<path>[^:\\r\\n]+\\.dart):(?P<line>\\d+)"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^CASE (?P<test>[^\\r\\n]+)"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".dart"
+  ]
+}

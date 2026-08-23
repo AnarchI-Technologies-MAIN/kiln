@@ -1,0 +1,10 @@
+{
+  "adapter": "kotlin-gradle",
+  "directories": [
+    ".gradle"
+  ],
+  "environment": {
+    "GRADLE_USER_HOME": "{specimen}/.gradle"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

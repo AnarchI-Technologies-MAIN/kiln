@@ -1,0 +1,8 @@
+{
+  "adapter": "swift-swiftpm",
+  "directories": [
+    ".build"
+  ],
+  "environment": {},
+  "schema": "kiln.coal-venv.v1"
+}

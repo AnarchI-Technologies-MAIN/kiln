@@ -1,0 +1,23 @@
+{
+  "adapter": "kotlin-gradle",
+  "buildSystems": [
+    "gradle"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "build.gradle.kts",
+    "settings.gradle.kts"
+  ],
+  "runtimeProbes": [
+    [
+      "gradle",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "junit-jupiter"
+  ],
+  "venvAdapter": "kotlin-gradle"
+}

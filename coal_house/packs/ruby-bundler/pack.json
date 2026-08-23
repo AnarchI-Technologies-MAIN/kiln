@@ -1,0 +1,27 @@
+{
+  "adapter": "ruby-bundler",
+  "buildSystems": [
+    "bundler"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "Gemfile",
+    "Gemfile.lock"
+  ],
+  "runtimeProbes": [
+    [
+      "bundle",
+      "--version"
+    ],
+    [
+      "ruby",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "minitest"
+  ],
+  "venvAdapter": "ruby-bundler"
+}

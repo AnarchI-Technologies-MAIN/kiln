@@ -1,0 +1,54 @@
+{
+  "adapter": "lua",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "none",
+    "environment": {
+      "LUA_PATH": "{specimen}/?.lua;{specimen}/?/init.lua;;"
+    },
+    "rebuildCommands": [],
+    "testCommand": [
+      "lua",
+      "tests/gate_test.lua"
+    ]
+  },
+  "languages": [
+    "lua"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "LUA_TOKEN_REPLACEMENT",
+        "pattern": "\\bfalse\\b|\\btrue\\b|\\band\\b|\\bor\\b|~=|==",
+        "replacements": {
+          "and": "or",
+          "false": "true",
+          "or": "and",
+          "true": "false",
+          "==": "~=",
+          "~=": "=="
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bassert\\s*\\("
+    ],
+    "locationPatterns": [
+      "FAIL (?P<path>[^:\\r\\n]+\\.lua):(?P<line>\\d+)"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^CASE (?P<test>[^\\r\\n]+)"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".lua"
+  ]
+}

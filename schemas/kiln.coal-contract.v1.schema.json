@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anarchi.invalid/schemas/kiln.coal-contract.v1.schema.json",
+  "title": "Kiln language-agnostic coal contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "contractVersion",
+    "adapter",
+    "languages",
+    "sourceExtensions",
+    "mutation",
+    "execution",
+    "proof"
+  ],
+  "properties": {
+    "schema": { "const": "kiln.coal-contract.v1" },
+    "contractVersion": { "const": "KILN-COAL-CONTRACT-1" },
+    "adapter": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]{0,63}$"
+    },
+    "languages": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "sourceExtensions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^\\.[^/\\\\]+$" }
+    },
+    "mutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "rules"],
+      "properties": {
+        "strategy": { "enum": ["python-tokenize", "text-rules"] },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "pattern", "replacements"],
+            "properties": {
+              "kind": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,95}$" },
+              "pattern": { "type": "string", "minLength": 1 },
+              "replacements": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": { "type": "string", "minLength": 1 }
+              },
+              "ignoreCase": { "type": "boolean", "default": false }
+            }
+          }
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "driver",
+        "rebuildCommands",
+        "testCommand",
+        "entryKind",
+        "appendEntry",
+        "environment"
+      ],
+      "properties": {
+        "driver": {
+          "enum": [
+            "api-health",
+            "command",
+            "npm-script",
+            "powershell-file",
+            "python-unittest",
+            "wsl2-shell"
+          ]
+        },
+        "rebuildCommands": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/command" }
+        },
+        "testCommand": { "$ref": "#/$defs/command" },
+        "entryKind": { "enum": ["none", "opaque", "path", "script"] },
+        "appendEntry": { "type": "boolean" },
+        "environment": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parser",
+        "locationPatterns",
+        "testPatterns",
+        "assertionPatterns"
+      ],
+      "properties": {
+        "parser": { "enum": ["generic", "javascript", "python"] },
+        "locationPatterns": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        },
+        "testPatterns": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        },
+        "assertionPatterns": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "command": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

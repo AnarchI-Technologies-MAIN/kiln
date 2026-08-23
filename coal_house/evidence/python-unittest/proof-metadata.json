@@ -1,0 +1,96 @@
+{
+  "proof_evidence_version": "KILN-PROOF-EVIDENCE-3",
+  "proof_metadata_version": "KILN-PROOF-METADATA-2",
+  "schema": "kiln.proof-metadata-aggregate.v1",
+  "trials": [
+    {
+      "metadata": {
+        "assertion_records": [
+          {
+            "assertion_id": "KILN-ASSERTION-6AEFB339C0F6EA47C0B4",
+            "assertion_kind": "COAL_ASSERTION_PATTERN",
+            "end_line": 8,
+            "expected_outcome": "ASSERTION_HOLDS",
+            "parent_source_hash": "ad37db074a3f2e768144b80faf17a0c42b5df88b3f9be8876936d058abde707b",
+            "source_hash": "686574954a1016d6e31ac601a0f284ad7ede7e4acb34fb7f2cb1db6fef6e8d30",
+            "source_path": "tests/test_gate.py",
+            "source_text": "        self.assertTrue(enabled(True))\n",
+            "start_line": 8,
+            "test_id": "tests/test_gate.py::line-8"
+          }
+        ],
+        "assertion_refs": [
+          "KILN-ASSERTION-6AEFB339C0F6EA47C0B4"
+        ],
+        "behavioral_fragment_refs": [
+          "KILN-FRAGMENT-3652FF7F1993C16BED7E"
+        ],
+        "detected_test_ids": [
+          "test_gate.GateTest.test_keeps_enabled",
+          "test_keeps_enabled (test_gate.GateTest.test_keeps_enabled)",
+          "tests/test_gate.py::line-8"
+        ],
+        "fragment_contract_version": "KILN-FRAGMENT-CONTRACT-1",
+        "fragment_contracts": [
+          {
+            "adapter": "python-unittest",
+            "ambient_symbols": [],
+            "assertion_refs": [
+              "KILN-ASSERTION-6AEFB339C0F6EA47C0B4"
+            ],
+            "behavior_claim": "declared assertion holds",
+            "compatibility_key": "KILN-FRAGMENT-COMPAT-8021A5995CDB6E0E516E",
+            "context_fragment_refs": [],
+            "contexts": [],
+            "contract_id": "KILN-FRAGMENT-CONTRACT-242FDF4AE0B6746116C5",
+            "contract_version": "KILN-FRAGMENT-CONTRACT-1",
+            "end_line": 8,
+            "entry": "tests",
+            "expected_outcome": "ASSERTION_HOLDS",
+            "fixture_refs": [],
+            "fragment_id": "KILN-FRAGMENT-3652FF7F1993C16BED7E",
+            "parent_source_hash": "ad37db074a3f2e768144b80faf17a0c42b5df88b3f9be8876936d058abde707b",
+            "precondition_fragment_refs": [],
+            "preconditions": [],
+            "provided_symbols": [],
+            "reproduction_scope": "PARENT_TEST",
+            "reproduction_selector": "tests/test_gate.py::line-8",
+            "reproduction_state": "DECLARATIVE_ONLY",
+            "required_symbols": [],
+            "role": "ASSERTION",
+            "sequence_position": 1,
+            "sequence_total": 1,
+            "source_hash": "686574954a1016d6e31ac601a0f284ad7ede7e4acb34fb7f2cb1db6fef6e8d30",
+            "source_path": "tests/test_gate.py",
+            "source_text": "        self.assertTrue(enabled(True))\n",
+            "start_line": 8,
+            "test_id": "tests/test_gate.py::line-8",
+            "unresolved_symbols": []
+          }
+        ],
+        "fragment_proof_links": [
+          {
+            "assertion_refs": [
+              "KILN-ASSERTION-6AEFB339C0F6EA47C0B4"
+            ],
+            "fragment_id": "KILN-FRAGMENT-3652FF7F1993C16BED7E",
+            "invariant_refs": [
+              "KILN-INVARIANT-7490260CD6C8DC3B8E4D"
+            ],
+            "link_id": "KILN-FRAGMENT-PROOF-5F2DD382CB858A947511",
+            "mutation_id": "KILN-MUTATION-C75A6AB1FAC87E81745C",
+            "observed_outcome": "TEST_FAILURE_OBSERVED",
+            "test_id": "tests/test_gate.py::line-8"
+          }
+        ],
+        "invariant_refs": [
+          "KILN-INVARIANT-7490260CD6C8DC3B8E4D"
+        ],
+        "proof_metadata_version": "KILN-PROOF-METADATA-2",
+        "schema": "kiln.proof-metadata.v2"
+      },
+      "mutation_id": "KILN-MUTATION-C75A6AB1FAC87E81745C",
+      "pass_number": 1
+    }
+  ]
+}

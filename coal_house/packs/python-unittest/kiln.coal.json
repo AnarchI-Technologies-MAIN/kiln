@@ -1,0 +1,63 @@
+{
+  "adapter": "python-unittest",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "path",
+    "environment": {
+      "PYTHONPYCACHEPREFIX": "{specimen}/.kiln/pycache"
+    },
+    "rebuildCommands": [
+      [
+        "python",
+        "-m",
+        "compileall",
+        "-q",
+        "{specimen}"
+      ]
+    ],
+    "testCommand": [
+      "python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "{entry}",
+      "-v"
+    ]
+  },
+  "languages": [
+    "python"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "PYTHON_TEXT_TOKEN_REPLACEMENT",
+        "pattern": "!=|==",
+        "replacements": {
+          "!=": "==",
+          "==": "!="
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bself\\.assert[A-Za-z]+\\s*\\("
+    ],
+    "locationPatterns": [
+      "File \\\"(?P<path>[^\\\"\\r\\n]+\\.py)\\\", line (?P<line>\\d+)"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^(?:ERROR|FAIL): (?P<test>[^\\r\\n]+)"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".py"
+  ]
+}

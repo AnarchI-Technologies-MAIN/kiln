@@ -1,0 +1,11 @@
+{
+  "adapter": "ruby-bundler",
+  "entry": "",
+  "failureOutput": "  1) Failure:\nGateTest#test_keeps_enabled [test/gate_test.rb:6]:\nExpected false to be truthy.\n",
+  "files": {
+    "Gemfile": "source \"https://rubygems.org\"\n",
+    "lib/gate.rb": "module Gate\n  def self.enabled(value)\n    value == true\n  end\nend\n",
+    "test/gate_test.rb": "require \"minitest/autorun\"\nrequire_relative \"../lib/gate\"\n\nclass GateTest < Minitest::Test\n  def test_keeps_enabled\n    assert(Gate.enabled(true))\n  end\nend\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

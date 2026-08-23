@@ -6,6 +6,7 @@ from pathlib import Path
 from engine.proof_metadata import (
     build_proof_metadata,
     failure_test_ids,
+    javascript_traceback_locations,
     proof_metadata_payload,
     validate_proof_metadata_payload,
 )
@@ -137,6 +138,133 @@ class ProofMetadataTests(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "invalid or incomplete"):
             validate_proof_metadata_payload(incomplete, "MUTATION-2")
+
+    def test_node_failure_identifies_javascript_assertion_and_fragment(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            tests = root / "packages" / "app" / "tests"
+            tests.mkdir(parents=True)
+            source = tests / "cli.test.mjs"
+            source.write_text(
+                'import test from "node:test";\n'
+                'import assert from "node:assert/strict";\n'
+                '\n'
+                'test("reports a failed command", () => {\n'
+                '  const result = { status: 1 };\n'
+                '  assert.equal(result.status, 0);\n'
+                '});\n',
+                encoding="utf-8",
+            )
+            stdout = (
+                "test at tests\\cli.test.mjs:4:1\n"
+                "AssertionError [ERR_ASSERTION]\n"
+                "    at TestContext.<anonymous> "
+                f"({source.as_uri()}:6:10)\n"
+            )
+            metadata = build_proof_metadata(
+                root,
+                "javascript",
+                stdout,
+                "",
+                "MUTATION-JS-1",
+                "test",
+            )
+
+            self.assertIn(
+                "tests/cli.test.mjs:4",
+                metadata.detected_test_ids,
+            )
+            self.assertIn(
+                "packages/app/tests/cli.test.mjs::reports a failed command",
+                metadata.detected_test_ids,
+            )
+            self.assertEqual(len(metadata.invariant_refs), 1)
+            self.assertEqual(len(metadata.assertion_refs), 1)
+            self.assertEqual(
+                len(metadata.behavioral_fragment_refs),
+                1,
+            )
+            self.assertEqual(len(metadata.assertion_records), 1)
+            self.assertEqual(len(metadata.fragment_contracts), 1)
+            self.assertEqual(len(metadata.fragment_proof_links), 1)
+            contract = metadata.fragment_contracts[0]
+            self.assertEqual(contract.adapter, "javascript")
+            self.assertEqual(contract.role, "ASSERTION")
+            self.assertEqual(contract.start_line, 6)
+            self.assertEqual(
+                metadata.assertion_records[0].assertion_kind,
+                "NODE_ASSERT_CALL",
+            )
+            self.assertIn(
+                "result",
+                contract.required_symbols,
+            )
+            self.assertIn(
+                "assert",
+                contract.ambient_symbols,
+            )
+            self.assertNotIn(
+                "result",
+                contract.unresolved_symbols,
+            )
+            validate_proof_metadata_payload(
+                proof_metadata_payload(metadata),
+                "MUTATION-JS-1",
+            )
+
+    def test_javascript_stack_locations_are_deterministic(self):
+        output = (
+            "    at TestContext.<anonymous> "
+            "(file:///C:/repo/tests/b.test.mjs:9:12)\n"
+            "    at TestContext.<anonymous> "
+            "(file:///C:/repo/tests/a.test.mjs:4:7)\n"
+        )
+
+        self.assertEqual(
+            javascript_traceback_locations(output),
+            (
+                ("file:///C:/repo/tests/a.test.mjs", 4),
+                ("file:///C:/repo/tests/b.test.mjs", 9),
+            ),
+        )
+
+    def test_javascript_metadata_handles_multiple_failure_frames(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            tests = root / "tests"
+            tests.mkdir()
+            source = tests / "multi.test.mjs"
+            source.write_text(
+                'import test from "node:test";\n'
+                'import assert from "node:assert/strict";\n'
+                'test("reports both checks", () => {\n'
+                '  assert.equal(1, 2);\n'
+                '  assert.equal(3, 4);\n'
+                '});\n',
+                encoding="utf-8",
+            )
+            output = (
+                "    at TestContext.<anonymous> "
+                f"({source.as_uri()}:4:10)\n"
+                "    at TestContext.<anonymous> "
+                f"({source.as_uri()}:5:10)\n"
+            )
+            metadata = build_proof_metadata(
+                root,
+                "javascript",
+                output,
+                "",
+                "MUTATION-JS-MULTI",
+                "test",
+            )
+
+            self.assertEqual(len(metadata.assertion_records), 2)
+            self.assertEqual(len(metadata.fragment_contracts), 2)
+            self.assertEqual(len(metadata.fragment_proof_links), 2)
+            validate_proof_metadata_payload(
+                proof_metadata_payload(metadata),
+                "MUTATION-JS-MULTI",
+            )
 
     def test_failure_test_ids_are_deterministic(self):
         output=(

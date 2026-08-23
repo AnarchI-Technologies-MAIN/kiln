@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anarchi.invalid/schemas/kiln.coal-pack.v1.schema.json",
+  "title": "Kiln coal-house pack manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "adapter",
+    "buildSystems",
+    "testRunners",
+    "venvAdapter",
+    "environment",
+    "runtimeProbes",
+    "productionMarkers",
+    "fixture"
+  ],
+  "properties": {
+    "schema": { "const": "kiln.coal-pack.v1" },
+    "adapter": { "$ref": "#/$defs/adapter" },
+    "buildSystems": { "$ref": "#/$defs/names" },
+    "testRunners": { "$ref": "#/$defs/names" },
+    "venvAdapter": { "$ref": "#/$defs/adapter" },
+    "environment": { "const": "specimen-local" },
+    "runtimeProbes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/command" }
+    },
+    "productionMarkers": { "$ref": "#/$defs/names" },
+    "fixture": {
+      "type": "string",
+      "pattern": "^[^/\\\\]+\\.json$"
+    }
+  },
+  "$defs": {
+    "adapter": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]{0,63}$"
+    },
+    "names": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "command": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

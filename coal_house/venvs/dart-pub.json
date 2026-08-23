@@ -1,0 +1,10 @@
+{
+  "adapter": "dart-pub",
+  "directories": [
+    ".pub-cache"
+  ],
+  "environment": {
+    "PUB_CACHE": "{specimen}/.pub-cache"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

@@ -1,0 +1,28 @@
+{
+  "adapter": "php-composer",
+  "baseline_passed": false,
+  "blockers": [
+    "runtime unavailable: composer, php"
+  ],
+  "cleanup_complete": false,
+  "contract_hash": "493007226ac76d4ecaed5389a6956400ab4f9eefcb5b32390dc4e18f37fd49b5",
+  "destructive_trial_passed": false,
+  "deterministic_replay": false,
+  "disposition": "COAL_QUALIFICATION_BLOCKED_RUNTIME_UNAVAILABLE",
+  "fixture_qualified": false,
+  "fractures_observed": 0,
+  "metal_earned": false,
+  "mutation_candidate_count": 0,
+  "production_commit": "",
+  "production_fractures": 0,
+  "production_proven": false,
+  "production_survivors": [],
+  "production_target_id": "",
+  "replay_hashes": [],
+  "restoration_complete": false,
+  "runtime_available": false,
+  "schema": "kiln.coal-qualification.v1",
+  "source_preserved": false,
+  "survivors": [],
+  "truthful_proof": false
+}

@@ -1,0 +1,26 @@
+{
+  "adapter": "java-maven",
+  "build_systems": [
+    "maven"
+  ],
+  "contract_hash": "4cd391cd28eeced4ecd910bb1c3834891d09bbfacde5ddc0a778cd2ed980f7da",
+  "disposition": "COAL_RUNTIME_UNAVAILABLE",
+  "environment": "specimen-local",
+  "implemented": true,
+  "languages": [
+    "java"
+  ],
+  "metal_earned": false,
+  "missing_commands": [
+    "mvn"
+  ],
+  "production_proven": false,
+  "runtime_available": false,
+  "runtime_versions": [],
+  "schema": "kiln.coal-capability.v1",
+  "test_runners": [
+    "junit-jupiter",
+    "maven-surefire"
+  ],
+  "venv_adapter": "java-maven"
+}

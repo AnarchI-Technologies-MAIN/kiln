@@ -7,6 +7,7 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 
 from engine.environment_reconstruction import (
+    ReconstructionResult,
     adjudicate_reconstruction,
     host_capabilities,
     reconstruct_api_service,
@@ -16,6 +17,14 @@ from engine.environment_reconstruction import (
     reconstruct_wsl2,
 )
 from engine.target_intake import inspect_target
+from engine.coal_contracts import resolve_coal_contract
+from engine.coal_tongs import (
+    coal_capability_matrix,
+    coal_pack,
+    qualify_coal_pack,
+    write_coal_fixture,
+)
+from engine.coal_venvs import discover_coal_venvs
 from engine.cycle_orchestrator import (
     finalize_cycle_result,
     run_cycle,
@@ -133,6 +142,51 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
     )
 
+    coal = commands.add_parser(
+        "coal",
+        help="Validate and inspect a normalized language coal contract.",
+    )
+    coal.add_argument("target")
+    coal.add_argument(
+        "--adapter",
+        required=True,
+        metavar="COAL",
+    )
+    coal.add_argument("--json", action="store_true")
+
+    coal_house = commands.add_parser(
+        "coal-house",
+        help="Report implemented, runtime-available, and production-proven coals.",
+    )
+    coal_house.add_argument("--evidence-root", type=Path)
+    coal_house.add_argument("--json", action="store_true")
+
+    coal_venvs = commands.add_parser(
+        "coal-venvs",
+        help="Report reusable specimen-local environment adapters.",
+    )
+    coal_venvs.add_argument("--json", action="store_true")
+
+    coal_fixture = commands.add_parser(
+        "coal-fixture",
+        help="Generate one reusable adapter conformance fixture.",
+    )
+    coal_fixture.add_argument("destination", type=Path)
+    coal_fixture.add_argument("--adapter", required=True, metavar="COAL")
+    coal_fixture.add_argument("--json", action="store_true")
+
+    coal_qualify = commands.add_parser(
+        "coal-qualify",
+        help="Run replayed isolated qualification for one coal pack.",
+    )
+    coal_qualify.add_argument("--adapter", required=True, metavar="COAL")
+    coal_qualify.add_argument("--evidence-root", type=Path, required=True)
+    coal_qualify.add_argument("--production-target", type=Path)
+    coal_qualify.add_argument("--production-entry", default="")
+    coal_qualify.add_argument("--production-passes", type=int, default=8)
+    coal_qualify.add_argument("--destructive", action="store_true")
+    coal_qualify.add_argument("--json", action="store_true")
+
     reconstruct = commands.add_parser(
         "reconstruct",
         help="Materialize and prove an isolated target specimen.",
@@ -141,13 +195,7 @@ def build_parser() -> argparse.ArgumentParser:
     reconstruct.add_argument(
         "--adapter",
         required=True,
-        choices=(
-            "python",
-            "javascript",
-            "powershell",
-            "wsl2",
-            "api-service",
-        ),
+        metavar="COAL",
     )
     reconstruct.add_argument(
         "--entry",
@@ -179,13 +227,7 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument(
             "--adapter",
             required=True,
-            choices=(
-                "python",
-                "javascript",
-                "powershell",
-                "wsl2",
-                "api-service",
-            ),
+            metavar="COAL",
         )
 
         command.add_argument(
@@ -206,13 +248,7 @@ def build_parser() -> argparse.ArgumentParser:
     pressure.add_argument(
         "--adapter",
         required=True,
-        choices=(
-            "python",
-            "javascript",
-            "powershell",
-            "wsl2",
-            "api-service",
-        ),
+        metavar="COAL",
     )
     pressure.add_argument("--entry", default="tests")
     pressure.add_argument("--max-passes", type=int, default=4)
@@ -229,13 +265,7 @@ def build_parser() -> argparse.ArgumentParser:
     inject.add_argument(
         "--adapter",
         required=True,
-        choices=(
-            "python",
-            "javascript",
-            "powershell",
-            "wsl2",
-            "api-service",
-        ),
+        metavar="COAL",
     )
     inject.add_argument("--entry", default="tests")
     inject.add_argument("--candidate-id", required=True)
@@ -330,7 +360,7 @@ def build_parser() -> argparse.ArgumentParser:
     cycle.add_argument("target")
     cycle.add_argument(
         "--adapter",
-        choices=("python","javascript","powershell","wsl2","api-service"),
+        metavar="COAL",
         default="python",
     )
     cycle.add_argument(
@@ -428,6 +458,102 @@ def command_capabilities(args):
     return 0
 
 
+def command_coal(args):
+    identity = inspect_target(args.target)
+    root = Path(identity.repository_root).resolve()
+    contract = resolve_coal_contract(
+        args.adapter,
+        root,
+    )
+
+    if contract is None:
+        emit(
+            {
+                "adapter": args.adapter,
+                "disposition": "COAL_CONTRACT_MISSING",
+                "target_id": identity.target_id,
+            },
+            args.json,
+        )
+        return 11
+
+    emit(
+        {
+            "adapter": args.adapter,
+            "contract": serialize(contract),
+            "disposition": "COAL_CONTRACT_ACCEPTED",
+            "target_id": identity.target_id,
+        },
+        args.json,
+    )
+    return 0
+
+
+def command_coal_house(args):
+    emit(
+        {
+            "capabilities": coal_capability_matrix(args.evidence_root),
+            "disposition": "COAL_HOUSE_CAPABILITY_MATRIX_READY",
+        },
+        args.json,
+    )
+    return 0
+
+
+def command_coal_venvs(args):
+    emit(
+        {
+            "adapters": [
+                {
+                    "adapter": item.adapter,
+                    "directories": item.directories,
+                    "environment": dict(item.environment),
+                }
+                for item in discover_coal_venvs()
+            ],
+            "disposition": "COAL_VENV_LIBRARY_READY",
+        },
+        args.json,
+    )
+    return 0
+
+
+def command_coal_fixture(args):
+    pack = coal_pack(args.adapter)
+    root = write_coal_fixture(pack, args.destination)
+    emit(
+        {
+            "adapter": args.adapter,
+            "destination": str(root),
+            "disposition": "COAL_FIXTURE_GENERATED",
+        },
+        args.json,
+    )
+    return 0
+
+
+def command_coal_qualify(args):
+    if not args.destructive:
+        emit(
+            {
+                "adapter": args.adapter,
+                "disposition": "DESTRUCTIVE_AUTHORIZATION_REQUIRED",
+            },
+            args.json,
+        )
+        return 12
+
+    result = qualify_coal_pack(
+        args.adapter,
+        args.evidence_root,
+        args.production_target,
+        args.production_entry,
+        args.production_passes,
+    )
+    emit(result, args.json)
+    return 0 if result.fixture_qualified or not result.runtime_available else 1
+
+
 def command_reconstruct(args):
     identity = inspect_target(
         args.target
@@ -475,6 +601,40 @@ def command_reconstruct(args):
         result = reconstruct_api_service(
             root,
             args.entry,
+        )
+
+    if args.adapter not in {
+        "python",
+        "javascript",
+        "powershell",
+        "wsl2",
+        "api-service",
+    }:
+        baseline = run_target_baseline(
+            args.target,
+            args.adapter,
+            args.entry,
+        )
+        result = ReconstructionResult(
+            adapter=args.adapter,
+            source_root=str(root.resolve()),
+            specimen_root="",
+            materialized=(
+                baseline.disposition != "BASELINE_BLOCKED"
+            ),
+            baseline_passed=baseline.baseline_passed,
+            exit_code=baseline.exit_code,
+            teardown_proven=baseline.specimen_removed,
+            original_untouched=baseline.original_head_preserved,
+            disposition=(
+                "RECONSTRUCTION_PROVEN"
+                if (
+                    baseline.baseline_passed
+                    and baseline.specimen_removed
+                    and baseline.original_head_preserved
+                )
+                else "RECONSTRUCTED_BASELINE_FAILED"
+            ),
         )
 
     decision = adjudicate_reconstruction(
@@ -584,6 +744,21 @@ def main(argv=None):
 
     if args.command == "capabilities":
         return command_capabilities(args)
+
+    if args.command == "coal":
+        return command_coal(args)
+
+    if args.command == "coal-house":
+        return command_coal_house(args)
+
+    if args.command == "coal-venvs":
+        return command_coal_venvs(args)
+
+    if args.command == "coal-fixture":
+        return command_coal_fixture(args)
+
+    if args.command == "coal-qualify":
+        return command_coal_qualify(args)
 
     if args.command == "reconstruct":
         return command_reconstruct(args)

@@ -1,0 +1,23 @@
+{
+  "adapter": "go",
+  "buildSystems": [
+    "go-modules"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "go.mod",
+    "go.work"
+  ],
+  "runtimeProbes": [
+    [
+      "go",
+      "version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "go-test"
+  ],
+  "venvAdapter": "go-modules"
+}

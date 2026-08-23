@@ -1,0 +1,71 @@
+{
+  "adapter": "c-cmake",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "none",
+    "environment": {
+      "CTEST_OUTPUT_ON_FAILURE": "1"
+    },
+    "rebuildCommands": [
+      [
+        "cmake",
+        "-S",
+        "{specimen}",
+        "-B",
+        "{specimen}/build",
+        "-DBUILD_TESTING=ON"
+      ],
+      [
+        "cmake",
+        "--build",
+        "{specimen}/build"
+      ]
+    ],
+    "testCommand": [
+      "ctest",
+      "--test-dir",
+      "{specimen}/build",
+      "--output-on-failure"
+    ]
+  },
+  "languages": [
+    "c"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "C_TOKEN_REPLACEMENT",
+        "pattern": "\\bfalse\\b|\\btrue\\b|!=|==|&&|\\|\\|",
+        "replacements": {
+          "!=": "==",
+          "&&": "||",
+          "==": "!=",
+          "false": "true",
+          "true": "false",
+          "||": "&&"
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bassert\\s*\\("
+    ],
+    "locationPatterns": [
+      "FAIL (?P<path>[^:\\r\\n]+\\.c):(?P<line>\\d+)"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^CASE (?P<test>[^\\r\\n]+)"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".c",
+    ".h"
+  ]
+}

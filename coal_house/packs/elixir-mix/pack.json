@@ -1,0 +1,23 @@
+{
+  "adapter": "elixir-mix",
+  "buildSystems": [
+    "mix"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "mix.exs",
+    "mix.lock"
+  ],
+  "runtimeProbes": [
+    [
+      "mix",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "exunit"
+  ],
+  "venvAdapter": "elixir-mix"
+}

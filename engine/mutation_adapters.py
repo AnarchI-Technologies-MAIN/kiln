@@ -13,6 +13,13 @@ import urllib.error
 import urllib.request
 
 from engine.environment_reconstruction import executable_path
+from engine.coal_contracts import (
+    CoalContract,
+    available_coal_adapters,
+    coal_failure_locations,
+    coal_failure_test_ids,
+    resolve_coal_contract,
+)
 from engine.mutation_executor import (
     MUTATION_IDENTITY_VERSION,
     MutationCandidate,
@@ -69,14 +76,20 @@ SHELL_REPLACEMENTS = {
 DEFAULT_TEST_TIMEOUT_SECONDS = 300.0
 
 
-def supported_cycle_adapters() -> Tuple[str, ...]:
-    return (
-        "python",
-        "javascript",
-        "powershell",
-        "wsl2",
-        "api-service",
-    )
+def supported_cycle_adapters(
+    root: Path | None = None,
+) -> Tuple[str, ...]:
+    return available_coal_adapters(root)
+
+
+def adapter_available(
+    adapter: str,
+    root: Path,
+) -> bool:
+    return resolve_coal_contract(
+        adapter,
+        root,
+    ) is not None
 
 
 def excluded_source(
@@ -120,6 +133,13 @@ def excluded_source(
     if ".spec." in lowered_name:
         return True
 
+    if (
+        lowered_name.endswith("_test.go")
+        or lowered_name.endswith("_test.exs")
+        or lowered_name.endswith("_spec.rb")
+    ):
+        return True
+
     return False
 
 
@@ -129,6 +149,7 @@ def discover_text_mutations(
     replacements: dict[str, str],
     pattern: re.Pattern[str],
     kind: str,
+    ignore_case: bool = False,
 ) -> Tuple[MutationCandidate, ...]:
     root = Path(root).resolve()
     candidates = []
@@ -183,11 +204,8 @@ def discover_text_mutations(
 
                 lookup = original
 
-                if kind in {
-                    "POWERSHELL_TOKEN_REPLACEMENT",
-                    "WSL2_SHELL_TOKEN_REPLACEMENT",
-                }:
-                    lookup = original.lower()
+                if ignore_case:
+                    lookup = original.casefold()
 
                 replacement = replacements.get(
                     lookup
@@ -258,6 +276,7 @@ def discover_powershell_mutations(
             re.IGNORECASE,
         ),
         "POWERSHELL_TOKEN_REPLACEMENT",
+        ignore_case=True,
     )
 
 
@@ -273,6 +292,60 @@ def discover_wsl2_mutations(
             re.IGNORECASE,
         ),
         "WSL2_SHELL_TOKEN_REPLACEMENT",
+        ignore_case=True,
+    )
+
+
+def discover_contract_mutations(
+    root: Path,
+    contract: CoalContract,
+) -> Tuple[MutationCandidate, ...]:
+    if contract.mutation_strategy == "python-tokenize":
+        return discover_python_mutations(root)
+
+    candidates = []
+
+    for rule in contract.mutation_rules:
+        flags = re.IGNORECASE if rule.ignore_case else 0
+        replacements = dict(rule.replacements)
+
+        if rule.ignore_case:
+            replacements = {
+                key.casefold(): value
+                for key, value in replacements.items()
+            }
+
+        candidates.extend(
+            discover_text_mutations(
+                root,
+                set(contract.source_extensions),
+                replacements,
+                re.compile(rule.pattern, flags),
+                rule.kind,
+                ignore_case=rule.ignore_case,
+            )
+        )
+
+    identities = {
+        candidate.mutation_id
+        for candidate in candidates
+    }
+
+    if len(identities) != len(candidates):
+        raise RuntimeError(
+            "coal mutation rules produced duplicate identities"
+        )
+
+    return tuple(
+        sorted(
+            candidates,
+            key=lambda item: (
+                item.relative_path,
+                item.line,
+                item.column,
+                item.mutation_id,
+            ),
+        )
     )
 
 
@@ -280,33 +353,20 @@ def discover_mutations(
     adapter: str,
     root: Path,
 ) -> Tuple[MutationCandidate, ...]:
-    if adapter == "python":
-        return discover_python_mutations(
-            root
-        )
+    root = Path(root).resolve()
+    contract = resolve_coal_contract(
+        adapter,
+        root,
+    )
 
-    if adapter == "javascript":
-        return discover_javascript_mutations(
-            root
-        )
-
-    if adapter == "powershell":
-        return discover_powershell_mutations(
-            root
-        )
-
-    if adapter == "wsl2":
-        return discover_wsl2_mutations(
-            root
-        )
-
-    if adapter == "api-service":
-        return discover_python_mutations(
-            root
+    if contract is not None:
+        return discover_contract_mutations(
+            root,
+            contract,
         )
 
     raise RuntimeError(
-        f"unsupported mutation adapter: {adapter}"
+        f"coal contract not found for adapter: {adapter}"
     )
 
 
@@ -681,7 +741,30 @@ def run_adapter_tests(
         specimen
     )
 
-    if adapter == "python":
+    contract = resolve_coal_contract(
+        adapter,
+        specimen,
+    )
+
+    if contract is None:
+        raise RuntimeError(
+            f"coal contract not found for adapter: {adapter}"
+        )
+
+    environment.update({
+        key: value.replace(
+            "{specimen}",
+            str(specimen),
+        ).replace(
+            "{entry}",
+            entry,
+        )
+        for key, value in contract.execution.environment
+    })
+
+    driver = contract.execution.driver
+
+    if driver == "python-unittest":
         return subprocess.run(
             python_command(entry),
             cwd=str(specimen),
@@ -692,7 +775,7 @@ def run_adapter_tests(
             timeout=timeout_seconds,
         )
 
-    if adapter == "javascript":
+    if driver == "npm-script":
         npm = executable_path(
             "npm"
         )
@@ -711,7 +794,7 @@ def run_adapter_tests(
             timeout=timeout_seconds,
         )
 
-    if adapter == "powershell":
+    if driver == "powershell-file":
         pwsh = executable_path(
             "pwsh"
         )
@@ -737,20 +820,144 @@ def run_adapter_tests(
             timeout=timeout_seconds,
         )
 
-    if adapter == "wsl2":
+    if driver == "wsl2-shell":
         return run_wsl2_tests(
             specimen,
             entry,
             timeout_seconds,
         )
 
-    if adapter == "api-service":
+    if driver == "api-health":
         return run_api_service_tests(
             specimen,
             entry,
             timeout_seconds,
         )
 
-    raise RuntimeError(
-        f"unsupported cycle adapter: {adapter}"
+    if driver == "command":
+        return run_contract_tests(
+            contract,
+            specimen,
+            entry,
+            environment,
+            timeout_seconds,
+        )
+
+    raise RuntimeError("coal execution driver is not implemented")
+
+
+def expand_contract_command(
+    command: Tuple[str, ...],
+    specimen: Path,
+    entry: str,
+) -> list[str]:
+    expanded = [
+        token.replace(
+            "{specimen}",
+            str(specimen),
+        ).replace(
+            "{entry}",
+            entry,
+        )
+        for token in command
+    ]
+
+    executable = expanded[0]
+
+    if not any(
+        separator in executable
+        for separator in ("/", "\\")
+    ):
+        resolved = executable_path(executable)
+
+        if not resolved:
+            raise RuntimeError(
+                "coal command executable is unavailable: "
+                + executable
+            )
+
+        expanded[0] = resolved
+
+    return expanded
+
+
+def run_contract_tests(
+    contract: CoalContract,
+    specimen: Path,
+    entry: str,
+    environment: dict[str, str],
+    timeout_seconds: float,
+):
+    deadline = time.monotonic() + timeout_seconds
+    stdout_parts = []
+    stderr_parts = []
+    commands = list(
+        contract.execution.rebuild_commands
+    )
+    test_command = list(
+        contract.execution.test_command
+    )
+
+    if contract.execution.append_entry and entry:
+        test_command.append(entry)
+
+    commands.append(tuple(test_command))
+    last_args = []
+
+    for index, command in enumerate(commands):
+        remaining = deadline - time.monotonic()
+
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired(
+                cmd=last_args or list(command),
+                timeout=timeout_seconds,
+                output="".join(stdout_parts),
+                stderr="".join(stderr_parts),
+            )
+
+        args = expand_contract_command(
+            tuple(command),
+            specimen,
+            entry,
+        )
+        last_args = args
+        result = subprocess.run(
+            args,
+            cwd=str(specimen),
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=remaining,
+        )
+        stdout_parts.append(result.stdout or "")
+        stderr_parts.append(result.stderr or "")
+
+        if result.returncode != 0:
+            output = "".join(stdout_parts) + "\n" + "".join(stderr_parts)
+            final_test_command = index == len(commands) - 1
+            proven_test_failure = bool(
+                final_test_command
+                and coal_failure_locations(contract, output)
+                and coal_failure_test_ids(contract, output)
+            )
+            normalized_returncode = (
+                1
+                if proven_test_failure
+                else 2
+                if result.returncode == 1
+                else result.returncode
+            )
+            return subprocess.CompletedProcess(
+                args=args,
+                returncode=normalized_returncode,
+                stdout="".join(stdout_parts),
+                stderr="".join(stderr_parts),
+            )
+
+    return subprocess.CompletedProcess(
+        args=last_args,
+        returncode=0,
+        stdout="".join(stdout_parts),
+        stderr="".join(stderr_parts),
     )

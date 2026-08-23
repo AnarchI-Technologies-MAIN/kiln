@@ -1,0 +1,10 @@
+{
+  "adapter": "r-library",
+  "directories": [
+    ".r-library"
+  ],
+  "environment": {
+    "R_LIBS_USER": "{specimen}/.r-library"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

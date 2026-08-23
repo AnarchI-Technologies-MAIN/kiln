@@ -1,0 +1,11 @@
+{
+  "adapter": "swift-swiftpm",
+  "entry": "",
+  "failureOutput": "Tests/KilnFixtureTests/GateTests.swift:6: error: GateTests.testKeepsEnabled\nTest Case '-[KilnFixtureTests.GateTests testKeepsEnabled]' failed\n",
+  "files": {
+    "Package.swift": "// swift-tools-version: 5.9\nimport PackageDescription\n\nlet package = Package(\n    name: \"KilnFixture\",\n    products: [.library(name: \"KilnFixture\", targets: [\"KilnFixture\"])],\n    targets: [.target(name: \"KilnFixture\"), .testTarget(name: \"KilnFixtureTests\", dependencies: [\"KilnFixture\"])]\n)\n",
+    "Sources/KilnFixture/Gate.swift": "public enum Gate {\n    public static func enabled(_ value: Bool) -> Bool {\n        value == true\n    }\n}\n",
+    "Tests/KilnFixtureTests/GateTests.swift": "import XCTest\n@testable import KilnFixture\n\nfinal class GateTests: XCTestCase {\n    func testKeepsEnabled() {\n        XCTAssertTrue(Gate.enabled(true))\n    }\n}\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

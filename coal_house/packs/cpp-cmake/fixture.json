@@ -1,0 +1,12 @@
+{
+  "adapter": "cpp-cmake",
+  "entry": "",
+  "failureOutput": "CASE gate_keeps_enabled\nFAIL tests/gate_test.cpp:11\n",
+  "files": {
+    "CMakeLists.txt": "cmake_minimum_required(VERSION 3.20)\nproject(kiln_coal_fixture CXX)\ninclude(CTest)\nadd_library(gate src/gate.cpp)\ntarget_include_directories(gate PUBLIC src)\nadd_executable(gate_test tests/gate_test.cpp)\ntarget_link_libraries(gate_test PRIVATE gate)\nadd_test(NAME gate_keeps_enabled COMMAND gate_test)\n",
+    "src/gate.cpp": "#include \"gate.hpp\"\n\nbool gate_enabled(bool value) {\n    return value == true;\n}\n",
+    "src/gate.hpp": "#pragma once\n\nbool gate_enabled(bool value);\n",
+    "tests/gate_test.cpp": "#include \"gate.hpp\"\n#include <cassert>\n#include <iostream>\n\nint main() {\n    if (!gate_enabled(true)) {\n        std::cerr << \"CASE gate_keeps_enabled\\n\";\n        std::cerr << \"FAIL tests/gate_test.cpp:11\\n\";\n        return 1;\n    }\n    assert(gate_enabled(true));\n    return 0;\n}\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

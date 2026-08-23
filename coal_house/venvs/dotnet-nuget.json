@@ -1,0 +1,13 @@
+{
+  "adapter": "dotnet-nuget",
+  "directories": [
+    ".dotnet",
+    ".nuget/packages"
+  ],
+  "environment": {
+    "DOTNET_CLI_HOME": "{specimen}/.dotnet",
+    "DOTNET_NOLOGO": "1",
+    "NUGET_PACKAGES": "{specimen}/.nuget/packages"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

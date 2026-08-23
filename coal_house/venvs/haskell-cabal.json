@@ -1,0 +1,11 @@
+{
+  "adapter": "haskell-cabal",
+  "directories": [
+    ".cabal",
+    "dist-newstyle"
+  ],
+  "environment": {
+    "CABAL_DIR": "{specimen}/.cabal"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

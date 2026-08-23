@@ -1,0 +1,66 @@
+{
+  "adapter": "haskell-cabal",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "none",
+    "environment": {
+      "CABAL_DIR": "{specimen}/.cabal"
+    },
+    "rebuildCommands": [
+      [
+        "cabal",
+        "build",
+        "all",
+        "--offline",
+        "--builddir={specimen}/dist-newstyle"
+      ]
+    ],
+    "testCommand": [
+      "cabal",
+      "test",
+      "all",
+      "--offline",
+      "--builddir={specimen}/dist-newstyle"
+    ]
+  },
+  "languages": [
+    "haskell"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "HASKELL_TOKEN_REPLACEMENT",
+        "pattern": "\\bFalse\\b|\\bTrue\\b|/=|==|&&|\\|\\|",
+        "replacements": {
+          "&&": "||",
+          "/=": "==",
+          "==": "/=",
+          "False": "True",
+          "True": "False",
+          "||": "&&"
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bunless\\s+"
+    ],
+    "locationPatterns": [
+      "FAIL (?P<path>[^:\\r\\n]+\\.hs):(?P<line>\\d+)"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^CASE (?P<test>[^\\r\\n]+)"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".hs",
+    ".lhs"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "adapter": "go-modules",
+  "directories": [
+    ".kiln/go-cache",
+    ".kiln/go-mod-cache",
+    ".kiln/go-path"
+  ],
+  "environment": {
+    "GOCACHE": "{specimen}/.kiln/go-cache",
+    "GOMODCACHE": "{specimen}/.kiln/go-mod-cache",
+    "GOPATH": "{specimen}/.kiln/go-path"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

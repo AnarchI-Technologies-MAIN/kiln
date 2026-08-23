@@ -1,0 +1,23 @@
+{
+  "adapter": "dart",
+  "buildSystems": [
+    "dart-pub"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "pubspec.lock",
+    "pubspec.yaml"
+  ],
+  "runtimeProbes": [
+    [
+      "dart",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "dart-script"
+  ],
+  "venvAdapter": "dart-pub"
+}

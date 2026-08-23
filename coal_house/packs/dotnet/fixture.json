@@ -1,0 +1,12 @@
+{
+  "adapter": "dotnet",
+  "entry": "tests/KilnFixture.Tests/KilnFixture.Tests.csproj",
+  "failureOutput": "  Failed KilnFixture.Tests.UnitTest1.KeepsEnabled\n   at KilnFixture.Tests.UnitTest1.KeepsEnabled() in tests/KilnFixture.Tests/UnitTest1.cs:line 10\n",
+  "files": {
+    "src/KilnFixture/Gate.cs": "namespace KilnFixture;\n\npublic static class Gate\n{\n    public static bool Enabled(bool value)\n    {\n        return value == true;\n    }\n}\n",
+    "src/KilnFixture/KilnFixture.csproj": "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n    <ImplicitUsings>enable</ImplicitUsings>\n    <Nullable>enable</Nullable>\n  </PropertyGroup>\n</Project>\n",
+    "tests/KilnFixture.Tests/KilnFixture.Tests.csproj": "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n    <ImplicitUsings>enable</ImplicitUsings>\n    <Nullable>enable</Nullable>\n    <IsPackable>false</IsPackable>\n    <IsTestProject>true</IsTestProject>\n  </PropertyGroup>\n  <ItemGroup>\n    <PackageReference Include=\"Microsoft.NET.Test.Sdk\" Version=\"17.11.1\" />\n    <PackageReference Include=\"xunit\" Version=\"2.9.2\" />\n    <PackageReference Include=\"xunit.runner.visualstudio\" Version=\"2.8.2\" />\n    <ProjectReference Include=\"../../src/KilnFixture/KilnFixture.csproj\" />\n  </ItemGroup>\n</Project>\n",
+    "tests/KilnFixture.Tests/UnitTest1.cs": "using Xunit;\n\nnamespace KilnFixture.Tests;\n\npublic class UnitTest1\n{\n    [Fact]\n    public void KeepsEnabled()\n    {\n        Assert.True(Gate.Enabled(true));\n    }\n}\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

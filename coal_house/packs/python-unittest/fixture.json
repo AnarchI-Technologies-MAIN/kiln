@@ -1,0 +1,10 @@
+{
+  "adapter": "python-unittest",
+  "entry": "tests",
+  "failureOutput": "FAIL: test_keeps_enabled (test_gate.GateTest.test_keeps_enabled)\nTraceback (most recent call last):\n  File \"tests/test_gate.py\", line 8, in test_keeps_enabled\n    self.assertTrue(enabled(True))\nAssertionError: False is not true\n",
+  "files": {
+    "gate.py": "def enabled(value: bool) -> bool:\n    return value == True\n",
+    "tests/test_gate.py": "import unittest\n\nfrom gate import enabled\n\n\nclass GateTest(unittest.TestCase):\n    def test_keeps_enabled(self):\n        self.assertTrue(enabled(True))\n\n\nif __name__ == \"__main__\":\n    unittest.main()\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

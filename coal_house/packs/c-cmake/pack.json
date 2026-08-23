@@ -1,0 +1,26 @@
+{
+  "adapter": "c-cmake",
+  "buildSystems": [
+    "cmake"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "CMakeLists.txt"
+  ],
+  "runtimeProbes": [
+    [
+      "cmake",
+      "--version"
+    ],
+    [
+      "ctest",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "ctest"
+  ],
+  "venvAdapter": "cmake-sandbox"
+}

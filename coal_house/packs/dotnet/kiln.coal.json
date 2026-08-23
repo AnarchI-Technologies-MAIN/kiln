@@ -1,0 +1,77 @@
+{
+  "adapter": "dotnet",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "path",
+    "environment": {
+      "DOTNET_CLI_HOME": "{specimen}/.dotnet",
+      "DOTNET_NOLOGO": "1",
+      "NUGET_PACKAGES": "{specimen}/.nuget/packages"
+    },
+    "rebuildCommands": [
+      [
+        "dotnet",
+        "restore",
+        "{entry}",
+        "--packages",
+        "{specimen}/.nuget/packages"
+      ],
+      [
+        "dotnet",
+        "build",
+        "{entry}",
+        "--no-restore",
+        "--nologo"
+      ]
+    ],
+    "testCommand": [
+      "dotnet",
+      "test",
+      "{entry}",
+      "--no-build",
+      "--no-restore",
+      "--nologo",
+      "--logger",
+      "console;verbosity=normal"
+    ]
+  },
+  "languages": [
+    "csharp"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "CSHARP_TOKEN_REPLACEMENT",
+        "pattern": "\\bfalse\\b|\\btrue\\b|!=|==|&&|\\|\\|",
+        "replacements": {
+          "!=": "==",
+          "&&": "||",
+          "==": "!=",
+          "false": "true",
+          "true": "false",
+          "||": "&&"
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bAssert\\.[A-Za-z]+\\s*\\("
+    ],
+    "locationPatterns": [
+      "in (?P<path>(?:(?:[A-Za-z]:[\\\\/]|/)[^:\\r\\n]+|[^:\\r\\n]+)\\.cs):line (?P<line>\\d+)"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^\\s*Failed (?P<test>\\S+)"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".cs"
+  ]
+}

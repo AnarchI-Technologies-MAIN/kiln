@@ -1,0 +1,11 @@
+{
+  "adapter": "ruby-bundler",
+  "directories": [
+    ".bundle/vendor"
+  ],
+  "environment": {
+    "BUNDLE_APP_CONFIG": "{specimen}/.bundle",
+    "BUNDLE_PATH": "{specimen}/.bundle/vendor"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

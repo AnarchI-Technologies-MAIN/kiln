@@ -1,0 +1,13 @@
+{
+  "adapter": "rust-cargo",
+  "directories": [
+    ".cargo",
+    "target"
+  ],
+  "environment": {
+    "CARGO_HOME": "{specimen}/.cargo",
+    "CARGO_TARGET_DIR": "{specimen}/target",
+    "CARGO_TERM_COLOR": "never"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

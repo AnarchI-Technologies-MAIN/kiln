@@ -1,0 +1,95 @@
+{
+  "proof_evidence_version": "KILN-PROOF-EVIDENCE-3",
+  "proof_metadata_version": "KILN-PROOF-METADATA-2",
+  "schema": "kiln.proof-metadata-aggregate.v1",
+  "trials": [
+    {
+      "metadata": {
+        "assertion_records": [
+          {
+            "assertion_id": "KILN-ASSERTION-1C76532AB02FEE4E0BCB",
+            "assertion_kind": "COAL_ASSERTION_PATTERN",
+            "end_line": 11,
+            "expected_outcome": "ASSERTION_HOLDS",
+            "parent_source_hash": "88e354140763f7b78ec7725bca03f1d348f8e1e332cdb99bac0f34453cec3de8",
+            "source_hash": "1e86d78577b8e498bd07933e3ffa5473f36fac5e181e2a24353c2000840e051f",
+            "source_path": "src/lib.rs",
+            "source_text": "        assert_eq!(enabled(true), true);\n",
+            "start_line": 11,
+            "test_id": "src/lib.rs::line-11"
+          }
+        ],
+        "assertion_refs": [
+          "KILN-ASSERTION-1C76532AB02FEE4E0BCB"
+        ],
+        "behavioral_fragment_refs": [
+          "KILN-FRAGMENT-36CF294F8CBAE2DF8259"
+        ],
+        "detected_test_ids": [
+          "src/lib.rs::line-11",
+          "tests::keeps_enabled"
+        ],
+        "fragment_contract_version": "KILN-FRAGMENT-CONTRACT-1",
+        "fragment_contracts": [
+          {
+            "adapter": "rust-cargo",
+            "ambient_symbols": [],
+            "assertion_refs": [
+              "KILN-ASSERTION-1C76532AB02FEE4E0BCB"
+            ],
+            "behavior_claim": "declared assertion holds",
+            "compatibility_key": "KILN-FRAGMENT-COMPAT-76BE4581F843FD61BBC6",
+            "context_fragment_refs": [],
+            "contexts": [],
+            "contract_id": "KILN-FRAGMENT-CONTRACT-EF9D08F6F1C2B627DF57",
+            "contract_version": "KILN-FRAGMENT-CONTRACT-1",
+            "end_line": 11,
+            "entry": ".",
+            "expected_outcome": "ASSERTION_HOLDS",
+            "fixture_refs": [],
+            "fragment_id": "KILN-FRAGMENT-36CF294F8CBAE2DF8259",
+            "parent_source_hash": "88e354140763f7b78ec7725bca03f1d348f8e1e332cdb99bac0f34453cec3de8",
+            "precondition_fragment_refs": [],
+            "preconditions": [],
+            "provided_symbols": [],
+            "reproduction_scope": "PARENT_TEST",
+            "reproduction_selector": "src/lib.rs::line-11",
+            "reproduction_state": "DECLARATIVE_ONLY",
+            "required_symbols": [],
+            "role": "ASSERTION",
+            "sequence_position": 1,
+            "sequence_total": 1,
+            "source_hash": "1e86d78577b8e498bd07933e3ffa5473f36fac5e181e2a24353c2000840e051f",
+            "source_path": "src/lib.rs",
+            "source_text": "        assert_eq!(enabled(true), true);\n",
+            "start_line": 11,
+            "test_id": "src/lib.rs::line-11",
+            "unresolved_symbols": []
+          }
+        ],
+        "fragment_proof_links": [
+          {
+            "assertion_refs": [
+              "KILN-ASSERTION-1C76532AB02FEE4E0BCB"
+            ],
+            "fragment_id": "KILN-FRAGMENT-36CF294F8CBAE2DF8259",
+            "invariant_refs": [
+              "KILN-INVARIANT-44571CDA5C9FD0EDD535"
+            ],
+            "link_id": "KILN-FRAGMENT-PROOF-7EC13EBBC8DFA21A0F78",
+            "mutation_id": "KILN-MUTATION-5AD6C38DAA05E8DDBDFB",
+            "observed_outcome": "TEST_FAILURE_OBSERVED",
+            "test_id": "src/lib.rs::line-11"
+          }
+        ],
+        "invariant_refs": [
+          "KILN-INVARIANT-44571CDA5C9FD0EDD535"
+        ],
+        "proof_metadata_version": "KILN-PROOF-METADATA-2",
+        "schema": "kiln.proof-metadata.v2"
+      },
+      "mutation_id": "KILN-MUTATION-5AD6C38DAA05E8DDBDFB",
+      "pass_number": 1
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "adapter": "zig",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "none",
+    "environment": {},
+    "rebuildCommands": [
+      [
+        "zig",
+        "build",
+        "--cache-dir",
+        "{specimen}/zig-cache",
+        "--global-cache-dir",
+        "{specimen}/zig-global-cache"
+      ]
+    ],
+    "testCommand": [
+      "zig",
+      "build",
+      "test",
+      "--cache-dir",
+      "{specimen}/zig-cache",
+      "--global-cache-dir",
+      "{specimen}/zig-global-cache"
+    ]
+  },
+  "languages": [
+    "zig"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "ZIG_TOKEN_REPLACEMENT",
+        "pattern": "\\bfalse\\b|\\btrue\\b|\\band\\b|\\bor\\b|!=|==",
+        "replacements": {
+          "and": "or",
+          "false": "true",
+          "or": "and",
+          "true": "false",
+          "!=": "==",
+          "==": "!="
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bstd\\.testing\\.expect\\s*\\("
+    ],
+    "locationPatterns": [
+      "FAIL (?P<path>[^:\\r\\n]+\\.zig):(?P<line>\\d+)"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^CASE (?P<test>[^\\r\\n]+)"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".zig"
+  ]
+}

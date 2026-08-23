@@ -1,0 +1,205 @@
+{
+  "adapters": [
+    {
+      "adapter": "c-cmake",
+      "contractHash": "dd3dd362abb54be13b40226e40f73792571046decc56e226f7f310c8426e8e7a",
+      "files": {
+        "capability.json": "3b42678557540b6038d2faffd6d3e09e3aab8c570bb4217a86b9791e61b1b878",
+        "qualification.json": "81d62f62395c1b4739d62b2bbe6f2c26f5247e91ee377f1ffc2f41066c8c4732"
+      },
+      "packManifestHash": "2ab8b4c1c325d6a6e1b0d7740ca4a0317a1e28159da3385aadd27c19c15204d0",
+      "venvAdapter": "cmake-sandbox",
+      "venvHash": "b88f717e4a2a19c69a62f53c491752db3886f1a08d4708eac6949e4454249ea9"
+    },
+    {
+      "adapter": "cpp-cmake",
+      "contractHash": "c32a2be442d78ef08a2d80390d2514f4ebb5b64232283369c0e819d8a5aa0f4a",
+      "files": {
+        "capability.json": "c83dd5260eb0ebc3a63e744cd21137b18792e9dbf69a3651a9b816dc492158e2",
+        "qualification.json": "0970bd15de04ff094a40fe29411e1b09e961d783f82087091c3da8c43dd50d58"
+      },
+      "packManifestHash": "430ca44ff04e29f7c1bce696714c92c5c437cd1af6e97a5a925a9114387fbb7d",
+      "venvAdapter": "cmake-sandbox",
+      "venvHash": "b88f717e4a2a19c69a62f53c491752db3886f1a08d4708eac6949e4454249ea9"
+    },
+    {
+      "adapter": "dart",
+      "contractHash": "886c7a9626b9552864784e889158b426892f940fb05c9dcf802f9d681b62ce60",
+      "files": {
+        "capability.json": "6c6bf79ec00ce90d1614eb082e0123d6bc31316779cc804fa1f826728ce85a9c",
+        "qualification.json": "9fd6d54dd04752cf7cbe587aaa466b9ef5207d85c42ab112d5a85f2d3464b996"
+      },
+      "packManifestHash": "49f9c3c15c7e5662691798e3de2010e16d3a14132a92c11d875a2c739981c62a",
+      "venvAdapter": "dart-pub",
+      "venvHash": "f78706cea5cd5bf894b1c6710fbe0c88206b44b4e2513d702f5d1a4820e68578"
+    },
+    {
+      "adapter": "dotnet",
+      "contractHash": "a0fe0e0a4d46f6cb2083b32a7a78f935d609a66fa71ccddf2487bfed5ff76047",
+      "files": {
+        "capability.json": "9290891fd11757be4b81866571f3f48cc6263eb91c52f4a9888c90ec71433fa7",
+        "qualification.json": "24f8d5ec2b4dcd34880e8576a963d7d0afac880d9fff2986aa923a5523e03171"
+      },
+      "packManifestHash": "cf5e92c96ef5c6286c619bf96a8aea240869f2eb9b4c46a16b696756217fda8f",
+      "venvAdapter": "dotnet-nuget",
+      "venvHash": "73959afcb53d93b5b7856b974a1072c4b7bb7aad8d01c082f05609f6cc2cbd4e"
+    },
+    {
+      "adapter": "elixir-mix",
+      "contractHash": "978745842fd8906cda0ef5b328ac052f61312cda389689ea665a65fe3f69766d",
+      "files": {
+        "capability.json": "af2e3ccd8f018c3fc170ee11e9ba95731df7f8505d4e0669b98f4072592b1971",
+        "qualification.json": "66b2cc91a9e441a7af22971fd98396d861a44daf7fd7a7c1b64863e10d92342a"
+      },
+      "packManifestHash": "a8877056959250eee67061e7e7661a706c12613f41fb409c719e8e0574a180e8",
+      "venvAdapter": "elixir-mix",
+      "venvHash": "89d2eeb093b05759ef9a75f9f3c3bebe801b2d40e7fa84e74b9be3b1c838e117"
+    },
+    {
+      "adapter": "go",
+      "contractHash": "2c6177c3761abaeb316111f239b62fd3b3a86cc9bb5ee4e21270b93f140f4372",
+      "files": {
+        "capability.json": "0d9f9b8dd36709187d2643b88370e38e76ded5bb72de168a77a1bfc28c704f14",
+        "qualification.json": "570c8f112c3747d199754c124da730401fc80bb0c941f5d64eadb0bc68f02125"
+      },
+      "packManifestHash": "117593381ebb172ee424239438c5ed35ae2d2cb43dc3fe9bde56352a0dee2e8b",
+      "venvAdapter": "go-modules",
+      "venvHash": "5d67b4471bfb039bd88be483c5d5e86971a30b8d2803d91c08aefaa3c99f3380"
+    },
+    {
+      "adapter": "haskell-cabal",
+      "contractHash": "16979524215b74560b5be6a60f128145d81d1fa47646f62e7e565157a3485798",
+      "files": {
+        "capability.json": "62235d7da0b0b56fb9731e8ae7962e549a5939eb5d9b81eab0af28d5e6d4c786",
+        "qualification.json": "c64320bf189b5570dd4814d42303baef46c76efcd48f6a2396a0fc3441a3d132"
+      },
+      "packManifestHash": "58337b5de1c56a886a6a31ec7799cb660b876e93abd8de7d6f2e677d218d72e4",
+      "venvAdapter": "haskell-cabal",
+      "venvHash": "0951457d48b679d651eb1c3999bd35626410153b8ccdee5a718df864397d42aa"
+    },
+    {
+      "adapter": "java-maven",
+      "contractHash": "4cd391cd28eeced4ecd910bb1c3834891d09bbfacde5ddc0a778cd2ed980f7da",
+      "files": {
+        "capability.json": "f21ea5437bbba0bd4ec435269ee3db654b3394b8317c15823b7e0496c8977fc6",
+        "qualification.json": "f1168e7e709dca6a9f621d58f699bebb84680f8ac13cb7c992d605822b022acb"
+      },
+      "packManifestHash": "a72311cdb2f5b87b143c540cc0790419cfdf82819df9eba7f59da26f2f582295",
+      "venvAdapter": "java-maven",
+      "venvHash": "af47449176c3b53f18ed90e8bb8344fa1d00427efc981bf13223632c2d3019e1"
+    },
+    {
+      "adapter": "kotlin-gradle",
+      "contractHash": "c50ae221fee91dcad7d861ea69d7184816f8acea4fee811c4f07b5a8dcf05b6d",
+      "files": {
+        "capability.json": "79d847c799f1c31fb013ba4e63a25aeb07182ec60dd7525a2f72ada91f832802",
+        "qualification.json": "1ed78abbd63b13950a2b9463009bd52faa9efc2c26d16968842a179bc4eccd1b"
+      },
+      "packManifestHash": "c9bb77a70e927ae935df7e680df3662e4eca22435449f9189f33209ca441a866",
+      "venvAdapter": "kotlin-gradle",
+      "venvHash": "61d0f9aa2f037924123bb9fb27da6016e3f527bf484f4d795146151fdac03a83"
+    },
+    {
+      "adapter": "lua",
+      "contractHash": "2eef289e564d045f3322e4e7fa437c8711150cd817468edc864eb404875b3b89",
+      "files": {
+        "capability.json": "fa62424e397037e5a155d32fb55d6c73aac56f425e08c31a433b05a70371d4ef",
+        "qualification.json": "27ba08e44360616fd7993de5332567464ef2f763dd9e6a90c431382ec4554a67"
+      },
+      "packManifestHash": "bdcf4f875b4180f5eec02626efb02dfaf85c9d268a853fd77a9c72059b7f14a5",
+      "venvAdapter": "lua-path",
+      "venvHash": "13ae20d1d856ea7c826310a6411325c548717b9a9035b71e944658f4db962346"
+    },
+    {
+      "adapter": "php-composer",
+      "contractHash": "493007226ac76d4ecaed5389a6956400ab4f9eefcb5b32390dc4e18f37fd49b5",
+      "files": {
+        "capability.json": "422985ad99163236ea46a55e6e1d8947e750c1fa7f0f32fcba591a4a32c8dc2e",
+        "qualification.json": "0472c8d80e0218fc062ee9ce58bb1f8595a938b445538cd6831ca1a3ef473ae3"
+      },
+      "packManifestHash": "c6a734a056a1e10fde8abc922297a395d0417baeef8b83f8c7f0a1d49aa60ec8",
+      "venvAdapter": "php-composer",
+      "venvHash": "c477392d128f026e2187905d0eda85d60fc3231e69eac951fd29c87890aa6cc5"
+    },
+    {
+      "adapter": "python-unittest",
+      "contractHash": "47fac45d67d51d9515fcf9c4515f4842c5dc14de1849b8f2792175623775d2b4",
+      "files": {
+        "capability.json": "27320b7926b9dc46ea309bea58ef0e54ae574cff9b1e722c8410a0da7e2ea441",
+        "mutation-trials.csv": "94b7485e705941f86a4e914e2f625ceb311732478c6f0f21dc5b50ba237a58df",
+        "production-mutation-trials.csv": "5d2c17daf14af26e194af5ca52ffeb83e090ee7333301969f9c55258cf9bd74d",
+        "production-proof-metadata.json": "37e7aca5d89922a4a7fc9b8f7c6aa0555d47fe6dc6c37bc84efcc7a70d083658",
+        "proof-metadata.json": "fffbc3a5980c1f95e225bcc9e8309a8ad3c3084ff8c859d7de2a83c0732fba2c",
+        "qualification.json": "bbed08e3df9a360be6233d6e3e0297cd16daec74fb0259570a19f71905379c76"
+      },
+      "packManifestHash": "19f6c59b5f544123925985515751060794de0357994d88e42b906fbf137324d6",
+      "venvAdapter": "python-runtime",
+      "venvHash": "63a8f7c7f372bed860c14e3402243b11bf5b55a012350e5b5f3ab481d2540afe"
+    },
+    {
+      "adapter": "r",
+      "contractHash": "d0a4876016eec6292649af387923974a91e02bb16e06183dfa28d8254982cae3",
+      "files": {
+        "capability.json": "524ee8b27fbb72d649dc5e0f818397cfb8cc11f460f76575cff54bef94134b45",
+        "qualification.json": "3ba0086929449e310100284a89d718a6780d35b2984019bd600255386e383f74"
+      },
+      "packManifestHash": "e00cda72e55c85cd5580cdb4f74a6658668ca70c89896d68aaec1fab58e87fc7",
+      "venvAdapter": "r-library",
+      "venvHash": "48ff73fa4af8b4d6f42809cad3d4b944fdc967577b04ba399365c99c6450df52"
+    },
+    {
+      "adapter": "ruby-bundler",
+      "contractHash": "c2d4da603d0e7508a8d1c4e0dde0ca8c015e89a3bb5b46e1651023e9fbd8da61",
+      "files": {
+        "capability.json": "9d03dddf96e54b8f22a4306808aa84f11aaeec5ef87b8f0c7e6e37664efe4b3f",
+        "qualification.json": "66f71c799ee4a69265d8b0e6709d85c7593dbac5977972a0e29259261d845711"
+      },
+      "packManifestHash": "a3a937c3597561dd40bc4f2cdc336a65c2891cff57c37fa35890166b496be44d",
+      "venvAdapter": "ruby-bundler",
+      "venvHash": "c86bee7b7f586f563daf7e86e5c9c34f25f7a60b34466730dbd1a8095ba9c995"
+    },
+    {
+      "adapter": "rust-cargo",
+      "contractHash": "c3f219f6d007c7667dbc3687c28e22bb140b6764ebb762c7d78316fc9cc2cfa8",
+      "files": {
+        "capability.json": "7049b5e470f89e9659b2793562829802815d5fafc1094020300ad4561abcf371",
+        "mutation-trials.csv": "671dacae8de9eeb594ced29873a7cb0b048fc2d462e17fd7ac651d0914304a41",
+        "production-mutation-trials.csv": "68acc48805db433ae06f393ac0de437de80adb66ae6442c941aadafdb0541841",
+        "production-proof-metadata.json": "2c8e4e10f7eeb380f35a0fd842170c4dbf776295b920844c4e2b4a88d2877ad1",
+        "proof-metadata.json": "2b48ec0dc5062094af978e6cff250ace6c2e900de21928d30c3c0cd9eb4f528d",
+        "qualification.json": "c3a5684ffc700d38c231e8fa8c898062b8fba9d53b74759b72f3c61caaf32b2f"
+      },
+      "packManifestHash": "630ea98ee883a4113dece6f610313f6307110ab8545d0c14f1ea7b2cfae1ecf2",
+      "venvAdapter": "rust-cargo",
+      "venvHash": "28d81fb5ec45f0085cf95d919cc756f37881c96375f175d2259dff407d18a62c"
+    },
+    {
+      "adapter": "swift-swiftpm",
+      "contractHash": "ce19d23face817dd380e81bbec4bca3482d8c9dd0a0af2bbce59faaf356f8fa8",
+      "files": {
+        "capability.json": "0b5e6b46d86522ee215165aa3ecc285870236f36c39bb5053da9ae0f83018561",
+        "qualification.json": "db00afb87e5de7691774a7b2491e01acc6be0d88213bbfadd204378782d05f3a"
+      },
+      "packManifestHash": "e0473974b9e4024f1db831a5722ac2a0d912cfb14c5f7800d136d4523e322744",
+      "venvAdapter": "swift-swiftpm",
+      "venvHash": "a8a5582240c597551b90aa7ad541f71490b1af47fb376fbf1b0284938aeaf222"
+    },
+    {
+      "adapter": "zig",
+      "contractHash": "38fe795c07890734128043bf3127dedc6ac15f15be547541e0429986ce83d514",
+      "files": {
+        "capability.json": "23ee818245c6eea9e3b5291aae4016c3b6f0bab21554059b02a66dd042a17867",
+        "qualification.json": "0b59f72ad76f4d49a2e66f4d65136beca6e4ba4d71c4c601d8a0bd51013a4894"
+      },
+      "packManifestHash": "ab115a0c29e5374488fc0af3dff934d050308e138693af93082b118e42ac2059",
+      "venvAdapter": "zig-cache",
+      "venvHash": "67f3078d68255f4a70a53cff4b32856f202a18a38d70fa7467703080280ae137"
+    }
+  ],
+  "schema": "kiln.coal-evidence-manifest.v1",
+  "topLevel": {
+    "CAPABILITY-MATRIX.md": "893df06c01d3b95dfda1d80cfaeaf4e413d6d92eecd9419537702a86dcaf0758",
+    "capability-matrix.json": "df8114a49b26f040817a76641b76aeb73cc6f2fdf5f47ce5213a21e6badbb7f4",
+    "survivors-requiring-adjudication.json": "bf4b09f79edb8034de666ed4958a49964a75cae3bb427c46013a27643504bd74"
+  }
+}

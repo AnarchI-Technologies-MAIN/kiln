@@ -1,0 +1,10 @@
+{
+  "adapter": "cmake-sandbox",
+  "directories": [
+    "build"
+  ],
+  "environment": {
+    "CTEST_OUTPUT_ON_FAILURE": "1"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

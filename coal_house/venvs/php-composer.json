@@ -1,0 +1,12 @@
+{
+  "adapter": "php-composer",
+  "directories": [
+    ".composer/cache",
+    ".composer/home"
+  ],
+  "environment": {
+    "COMPOSER_CACHE_DIR": "{specimen}/.composer/cache",
+    "COMPOSER_HOME": "{specimen}/.composer/home"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

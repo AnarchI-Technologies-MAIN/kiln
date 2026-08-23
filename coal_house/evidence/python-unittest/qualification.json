@@ -1,0 +1,35 @@
+{
+  "adapter": "python-unittest",
+  "baseline_passed": true,
+  "blockers": [],
+  "cleanup_complete": true,
+  "contract_hash": "47fac45d67d51d9515fcf9c4515f4842c5dc14de1849b8f2792175623775d2b4",
+  "destructive_trial_passed": true,
+  "deterministic_replay": true,
+  "disposition": "COAL_METAL_EARNED",
+  "fixture_qualified": true,
+  "fractures_observed": 1,
+  "metal_earned": true,
+  "mutation_candidate_count": 1,
+  "production_commit": "b2bf2aa6800aec63cb6f8503682a1787e5974f9f",
+  "production_fractures": 1,
+  "production_proven": true,
+  "production_survivors": [],
+  "production_target_id": "KILN-TARGET-092E2B8D036FF71D",
+  "replay_hashes": [
+    [
+      "mutation-trials.csv",
+      "94b7485e705941f86a4e914e2f625ceb311732478c6f0f21dc5b50ba237a58df"
+    ],
+    [
+      "proof-metadata.json",
+      "fffbc3a5980c1f95e225bcc9e8309a8ad3c3084ff8c859d7de2a83c0732fba2c"
+    ]
+  ],
+  "restoration_complete": true,
+  "runtime_available": true,
+  "schema": "kiln.coal-qualification.v1",
+  "source_preserved": true,
+  "survivors": [],
+  "truthful_proof": true
+}

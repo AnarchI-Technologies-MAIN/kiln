@@ -1,0 +1,63 @@
+{
+  "adapter": "elixir-mix",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "none",
+    "environment": {
+      "HEX_HOME": "{specimen}/.hex",
+      "MIX_BUILD_PATH": "{specimen}/_build",
+      "MIX_HOME": "{specimen}/.mix"
+    },
+    "rebuildCommands": [
+      [
+        "mix",
+        "compile"
+      ]
+    ],
+    "testCommand": [
+      "mix",
+      "test",
+      "--color=false"
+    ]
+  },
+  "languages": [
+    "elixir"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "ELIXIR_TOKEN_REPLACEMENT",
+        "pattern": "\\bfalse\\b|\\btrue\\b|!=|==|&&|\\|\\|",
+        "replacements": {
+          "!=": "==",
+          "&&": "||",
+          "==": "!=",
+          "false": "true",
+          "true": "false",
+          "||": "&&"
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bassert\\s+"
+    ],
+    "locationPatterns": [
+      "FAIL (?P<path>[^:\\r\\n]+\\.exs):(?P<line>\\d+)"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^CASE (?P<test>[^\\r\\n]+)"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".ex",
+    ".exs"
+  ]
+}

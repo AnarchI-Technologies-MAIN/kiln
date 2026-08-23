@@ -1,0 +1,11 @@
+{
+  "adapter": "dart",
+  "entry": "",
+  "failureOutput": "CASE Gate.keepsEnabled\nFAIL tests/gate_test.dart:9\n",
+  "files": {
+    "lib/gate.dart": "bool enabled(bool value) {\n  return value == true;\n}\n",
+    "pubspec.yaml": "name: kiln_coal_fixture\nenvironment:\n  sdk: '>=3.0.0 <4.0.0'\n",
+    "tests/gate_test.dart": "import '../lib/gate.dart';\n\nvoid main() {\n  if (!enabled(true)) {\n    print('CASE Gate.keepsEnabled');\n    print('FAIL tests/gate_test.dart:9');\n    throw StateError('expected enabled state');\n  }\n  assert(enabled(true));\n}\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

@@ -1,0 +1,72 @@
+{
+  "adapter": "ruby-bundler",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "none",
+    "environment": {
+      "BUNDLE_APP_CONFIG": "{specimen}/.bundle",
+      "BUNDLE_PATH": "{specimen}/.bundle/vendor"
+    },
+    "rebuildCommands": [
+      [
+        "bundle",
+        "config",
+        "set",
+        "--local",
+        "path",
+        "{specimen}/.bundle/vendor"
+      ],
+      [
+        "bundle",
+        "install",
+        "--local"
+      ]
+    ],
+    "testCommand": [
+      "bundle",
+      "exec",
+      "ruby",
+      "-Itest",
+      "test/gate_test.rb"
+    ]
+  },
+  "languages": [
+    "ruby"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "RUBY_TOKEN_REPLACEMENT",
+        "pattern": "\\bfalse\\b|\\btrue\\b|!=|==|&&|\\|\\|",
+        "replacements": {
+          "!=": "==",
+          "&&": "||",
+          "==": "!=",
+          "false": "true",
+          "true": "false",
+          "||": "&&"
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bassert(?:_equal)?\\s*\\("
+    ],
+    "locationPatterns": [
+      "\\[(?P<path>[^:\\r\\n]+\\.rb):(?P<line>\\d+)\\]"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^\\s*1\\) Failure:\\n(?P<test>[^\\[\\r\\n]+)\\s+\\["
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".rb"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "adapter": "elixir-mix",
+  "entry": "",
+  "failureOutput": "CASE KilnFixture.GateTest.keeps enabled\nFAIL test/gate_test.exs:9\n",
+  "files": {
+    "lib/gate.ex": "defmodule KilnFixture.Gate do\n  def enabled(value), do: value == true\nend\n",
+    "mix.exs": "defmodule KilnFixture.MixProject do\n  use Mix.Project\n  def project, do: [app: :kiln_fixture, version: \"0.1.0\", elixir: \"~> 1.14\", deps: []]\n  def application, do: [extra_applications: [:logger]]\nend\n",
+    "test/gate_test.exs": "defmodule KilnFixture.GateTest do\n  use ExUnit.Case\n\n  test \"keeps enabled\" do\n    unless KilnFixture.Gate.enabled(true) do\n      IO.puts(:stderr, \"CASE KilnFixture.GateTest.keeps enabled\")\n      IO.puts(:stderr, \"FAIL test/gate_test.exs:9\")\n    end\n    assert KilnFixture.Gate.enabled(true)\n  end\nend\n",
+    "test/test_helper.exs": "ExUnit.start()\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

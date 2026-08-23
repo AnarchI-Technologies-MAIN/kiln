@@ -13,6 +13,14 @@ from engine.mutation_adapters import (
     discover_mutations,
     run_adapter_tests,
 )
+from engine.coal_contracts import (
+    COAL_CONTRACT_FILENAME,
+    coal_house_contracts,
+)
+from engine.coal_tongs import (
+    mark_coal_specimen,
+    move_coal_pack_to_specimen,
+)
 from engine.mutation_executor import (
     MutationCandidate,
     apply_mutation,
@@ -414,6 +422,7 @@ class SandboxExecutor:
         cycle_id: str,
         pass_number: int,
         mutation_id: str,
+        adapter: str = "",
     ) -> SandboxLease:
         sandbox_id = sandbox_identity(
             cycle_id,
@@ -462,6 +471,32 @@ class SandboxExecutor:
                 "unable to materialize destructive sandbox: "
                 + added.stderr.strip()
             )
+
+        try:
+            mark_coal_specimen(root, repository)
+
+            if (
+                adapter in coal_house_contracts()
+                and not (repository / COAL_CONTRACT_FILENAME).exists()
+            ):
+                move_coal_pack_to_specimen(
+                    adapter,
+                    repository,
+                    root,
+                )
+        except Exception:
+            self.release(
+                SandboxLease(
+                    sandbox_id=sandbox_id,
+                    cycle_id=cycle_id,
+                    pass_number=pass_number,
+                    mutation_id=mutation_id,
+                    root=root,
+                    repository=repository,
+                    evidence_root=evidence_root,
+                )
+            )
+            raise
 
         return SandboxLease(
             sandbox_id=sandbox_id,
@@ -707,6 +742,7 @@ class SandboxExecutor:
                 cycle_id,
                 0,
                 "BASELINE",
+                adapter,
             )
         except Exception as error:
             execution_error = normalize_error(
@@ -829,6 +865,7 @@ class SandboxExecutor:
                 cycle_id,
                 pass_number,
                 advertised.mutation_id,
+                adapter,
             )
         except Exception as error:
             execution_error = normalize_error(

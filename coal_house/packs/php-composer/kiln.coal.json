@@ -1,0 +1,64 @@
+{
+  "adapter": "php-composer",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "none",
+    "environment": {
+      "COMPOSER_CACHE_DIR": "{specimen}/.composer/cache",
+      "COMPOSER_HOME": "{specimen}/.composer/home"
+    },
+    "rebuildCommands": [
+      [
+        "composer",
+        "install",
+        "--no-interaction",
+        "--no-progress"
+      ]
+    ],
+    "testCommand": [
+      "php",
+      "tests/gate_test.php"
+    ]
+  },
+  "languages": [
+    "php"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "PHP_TOKEN_REPLACEMENT",
+        "pattern": "\\bfalse\\b|\\btrue\\b|!==|===|!=|==|&&|\\|\\|",
+        "replacements": {
+          "!=": "==",
+          "!==": "===",
+          "&&": "||",
+          "==": "!=",
+          "===": "!==",
+          "false": "true",
+          "true": "false",
+          "||": "&&"
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bassert\\s*\\("
+    ],
+    "locationPatterns": [
+      "FAIL (?P<path>[^:\\r\\n]+\\.php):(?P<line>\\d+)"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^CASE (?P<test>[^\\r\\n]+)"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".php"
+  ]
+}

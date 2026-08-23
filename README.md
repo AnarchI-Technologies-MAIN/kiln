@@ -19,6 +19,11 @@ From Git:
     kiln --version
     kiln capabilities --json
     kiln inspect TARGET --json
+    kiln coal TARGET --adapter COAL --json
+    kiln coal-house --json
+    kiln coal-venvs --json
+    kiln coal-fixture DESTINATION --adapter rust-cargo --json
+    kiln coal-qualify --adapter rust-cargo --evidence-root EVIDENCE --destructive --json
     kiln preflight TARGET --adapter python --entry tests --json
     kiln baseline TARGET --adapter python --entry tests --json
     kiln candidates TARGET --adapter python --json
@@ -34,13 +39,52 @@ is disabled:
 
     kiln cycle TARGET --adapter python --entry tests --destructive --max-passes 8 --until stable --workers 4 --json
 
-Supported v0.1.3 destructive-cycle adapters:
+Normalized built-in destructive-cycle coals:
 
 - Python
 - JavaScript / TypeScript
 - PowerShell
 - Linux / WSL2
 - API service
+
+Kiln no longer has a closed language allowlist. A target can provide a
+validated `kiln.coal.json` at its repository root to define any textual source
+language's extensions, deterministic mutation rules, specimen-local rebuild
+commands, test command, environment, failure locations, test identities, and
+assertion patterns. Every built-in and repository-supplied adapter resolves to
+the same `KILN-COAL-CONTRACT-1` shape before preflight or execution. Contract
+commands are token arrays, never shell strings, and run under one finite
+deadline inside disposable specimens. See
+`docs/KILN-COAL-CONTRACT-1.md`, the canonical JSON Schema under `schemas/`,
+and the copyable Rust example under `docs/examples/`.
+
+The packaged coal house currently includes Python/unittest plus Rust/Cargo, Go,
+Java/Maven, .NET, Ruby/Bundler, PHP/Composer, C/CMake, C++/CMake,
+Kotlin/Gradle, Swift/SwiftPM, Dart, Lua, R, Elixir/Mix, Haskell/Cabal, and
+Zig. Pack directories are discovered dynamically; they do not close the external
+adapter boundary. Capability output distinguishes implementation from host runtime
+availability and production proof. An installed executable whose version probe
+fails is unavailable, and unavailable packs are never treated as passing.
+
+Each pack composes four independently reusable pieces: a language/mutation
+adapter, build adapter, test/proof adapter, and a named specimen-local virtual
+environment adapter. The environment sidecars under `coal_house/venvs/` declare
+only confined directories and environment variables. They are validated
+independently, cannot execute shell strings, and must exactly match the unchanged
+v1 contract environment before a pack is accepted.
+
+Every pack has independent mutation, execution, proof-parsing, restoration, and
+cleanup fixtures. Tongs copy contracts and materialize their bound environments
+only into marked disposable specimens,
+require proof-backed test failures, replay aggregate hashes, and leave source Git
+repositories at the same clean commit. Contracts cannot grant repair, promotion,
+commit, push, publication, or deployment authority.
+
+Qualification survivors are routed to
+`C:\Users\alexg\Desktop\AnarchI-Adjudication\To-Adjudicate\kiln-adjudication-candidates.json`.
+`KILN_ADJUDICATION_INBOX` may point tests or relocated installations at a
+different directory or JSON file. The packaged evidence copy remains an immutable
+proof artifact rather than the operational adjudication inbox.
 
 Ordinary destructive cycles do not mutate the target source repository. Kiln performs destructive work inside disposable specimens and verifies source preservation afterward.
 
@@ -67,6 +111,9 @@ records, expected outcomes, reproduction selectors, symbol requirements, and
 compatibility keys. Missing, dangling, contradictory, or transient-path proof
 metadata fails aggregate validation. These contracts prepare evidence for
 future Frankentest composition; Kiln does not yet synthesize or splice tests.
+Python and JavaScript coals provide syntax-aware failure fragments. External
+coals use declared proof patterns to emit truthful source-bound assertion or
+observation fragments through the same aggregate contract.
 
 Promotion is a separate authority boundary subject to Core 030 staging, contamination, adjudication, expected-HEAD, approval, Git, push, and remote-verification gates.
 

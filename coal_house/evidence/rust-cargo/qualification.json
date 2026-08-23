@@ -1,0 +1,37 @@
+{
+  "adapter": "rust-cargo",
+  "baseline_passed": true,
+  "blockers": [],
+  "cleanup_complete": true,
+  "contract_hash": "c3f219f6d007c7667dbc3687c28e22bb140b6764ebb762c7d78316fc9cc2cfa8",
+  "destructive_trial_passed": true,
+  "deterministic_replay": true,
+  "disposition": "COAL_METAL_EARNED",
+  "fixture_qualified": true,
+  "fractures_observed": 1,
+  "metal_earned": true,
+  "mutation_candidate_count": 4,
+  "production_commit": "a9620132ed9fe9640a020a90e657df84fd672c4a",
+  "production_fractures": 0,
+  "production_proven": true,
+  "production_survivors": [
+    "KILN-MUTATION-5CC75DD45EAF5E154453"
+  ],
+  "production_target_id": "KILN-TARGET-061E172CEBB3F4C9",
+  "replay_hashes": [
+    [
+      "mutation-trials.csv",
+      "671dacae8de9eeb594ced29873a7cb0b048fc2d462e17fd7ac651d0914304a41"
+    ],
+    [
+      "proof-metadata.json",
+      "2b48ec0dc5062094af978e6cff250ace6c2e900de21928d30c3c0cd9eb4f528d"
+    ]
+  ],
+  "restoration_complete": true,
+  "runtime_available": true,
+  "schema": "kiln.coal-qualification.v1",
+  "source_preserved": true,
+  "survivors": [],
+  "truthful_proof": true
+}

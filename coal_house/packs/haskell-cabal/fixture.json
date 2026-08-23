@@ -1,0 +1,12 @@
+{
+  "adapter": "haskell-cabal",
+  "entry": "",
+  "failureOutput": "CASE Gate.keepsEnabled\nFAIL test/Main.hs:8\n",
+  "files": {
+    "cabal.project": "packages: .\n",
+    "kiln-coal-fixture.cabal": "cabal-version: 3.0\nname: kiln-coal-fixture\nversion: 0.1.0.0\nbuild-type: Simple\n\nlibrary\n  exposed-modules: Gate\n  hs-source-dirs: src\n  build-depends: base >=4.14 && <5\n  default-language: Haskell2010\n\ntest-suite gate-test\n  type: exitcode-stdio-1.0\n  main-is: Main.hs\n  hs-source-dirs: test\n  build-depends: base >=4.14 && <5, kiln-coal-fixture\n  default-language: Haskell2010\n",
+    "src/Gate.hs": "module Gate (enabled) where\n\nenabled :: Bool -> Bool\nenabled value = value == True\n",
+    "test/Main.hs": "module Main where\n\nimport Control.Monad (unless)\nimport Gate (enabled)\nimport System.Exit (exitFailure)\n\nmain :: IO ()\nmain = unless (enabled True) $ do\n  putStrLn \"CASE Gate.keepsEnabled\"\n  putStrLn \"FAIL test/Main.hs:8\"\n  exitFailure\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

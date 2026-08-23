@@ -11,7 +11,9 @@ requires-python = ">=3.12"
 authors = [
     { name = "AnarchI Technologies" }
 ]
-dependencies = []
+dependencies = [
+    "jsonschema>=4.23,<5",
+]
 
 [project.urls]
 Repository = "https://github.com/AnarchI-Technologies-MAIN/kiln"
@@ -20,4 +22,17 @@ Repository = "https://github.com/AnarchI-Technologies-MAIN/kiln"
 kiln = "engine.cli:main"
 
 [tool.setuptools]
-packages = ["engine"]
+packages = ["engine", "coal_house"]
+
+[tool.setuptools.package-data]
+coal_house = [
+    "packs/*/*.json",
+    "venvs/*.json",
+    "evidence/*/*.csv",
+    "evidence/*/*.json",
+    "evidence/*.json",
+    "evidence/CAPABILITY-MATRIX.md",
+]
+
+[tool.setuptools.data-files]
+"share/anarchi-kiln/schemas" = ["schemas/*.json"]

@@ -1,0 +1,65 @@
+{
+  "adapter": "java-maven",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "none",
+    "environment": {
+      "MAVEN_OPTS": "-Dmaven.repo.local={specimen}/.m2/repository"
+    },
+    "rebuildCommands": [
+      [
+        "mvn",
+        "-B",
+        "-q",
+        "-DskipTests",
+        "compile"
+      ]
+    ],
+    "testCommand": [
+      "mvn",
+      "-B",
+      "-q",
+      "-Dstyle.color=never",
+      "test"
+    ]
+  },
+  "languages": [
+    "java"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "JAVA_TOKEN_REPLACEMENT",
+        "pattern": "\\bfalse\\b|\\btrue\\b|!=|==|&&|\\|\\|",
+        "replacements": {
+          "!=": "==",
+          "&&": "||",
+          "==": "!=",
+          "false": "true",
+          "true": "false",
+          "||": "&&"
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bassert(?:Equals|False|True)\\s*\\("
+    ],
+    "locationPatterns": [
+      "FAIL (?P<path>[^:\\r\\n]+\\.java):(?P<line>\\d+)"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^CASE (?P<test>[^\\r\\n]+)"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".java"
+  ]
+}

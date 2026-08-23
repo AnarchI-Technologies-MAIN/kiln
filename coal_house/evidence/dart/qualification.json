@@ -1,0 +1,28 @@
+{
+  "adapter": "dart",
+  "baseline_passed": false,
+  "blockers": [
+    "runtime unavailable: dart"
+  ],
+  "cleanup_complete": false,
+  "contract_hash": "886c7a9626b9552864784e889158b426892f940fb05c9dcf802f9d681b62ce60",
+  "destructive_trial_passed": false,
+  "deterministic_replay": false,
+  "disposition": "COAL_QUALIFICATION_BLOCKED_RUNTIME_UNAVAILABLE",
+  "fixture_qualified": false,
+  "fractures_observed": 0,
+  "metal_earned": false,
+  "mutation_candidate_count": 0,
+  "production_commit": "",
+  "production_fractures": 0,
+  "production_proven": false,
+  "production_survivors": [],
+  "production_target_id": "",
+  "replay_hashes": [],
+  "restoration_complete": false,
+  "runtime_available": false,
+  "schema": "kiln.coal-qualification.v1",
+  "source_preserved": false,
+  "survivors": [],
+  "truthful_proof": false
+}

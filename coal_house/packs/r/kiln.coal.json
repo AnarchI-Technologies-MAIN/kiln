@@ -1,0 +1,55 @@
+{
+  "adapter": "r",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "none",
+    "environment": {
+      "R_LIBS_USER": "{specimen}/.r-library"
+    },
+    "rebuildCommands": [],
+    "testCommand": [
+      "Rscript",
+      "tests/gate_test.R"
+    ]
+  },
+  "languages": [
+    "r"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "R_TOKEN_REPLACEMENT",
+        "pattern": "\\bFALSE\\b|\\bTRUE\\b|!=|==|&&|\\|\\|",
+        "replacements": {
+          "FALSE": "TRUE",
+          "TRUE": "FALSE",
+          "!=": "==",
+          "&&": "||",
+          "==": "!=",
+          "||": "&&"
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bstopifnot\\s*\\("
+    ],
+    "locationPatterns": [
+      "FAIL (?P<path>[^:\\r\\n]+\\.[Rr]):(?P<line>\\d+)"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^CASE (?P<test>[^\\r\\n]+)"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".R",
+    ".r"
+  ]
+}

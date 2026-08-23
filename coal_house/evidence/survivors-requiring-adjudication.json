@@ -1,0 +1,11 @@
+{
+  "schema": "kiln.coal-survivors.v1",
+  "survivors": [
+    {
+      "adapter": "rust-cargo",
+      "campaign": "production",
+      "disposition": "REQUIRES_ADJUDICATION",
+      "mutation_id": "KILN-MUTATION-5CC75DD45EAF5E154453"
+    }
+  ]
+}

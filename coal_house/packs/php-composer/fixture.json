@@ -1,0 +1,11 @@
+{
+  "adapter": "php-composer",
+  "entry": "",
+  "failureOutput": "CASE GateTest::keepsEnabled\nFAIL tests/gate_test.php:11\n",
+  "files": {
+    "composer.json": "{\n  \"name\": \"kiln/coal-fixture\",\n  \"type\": \"project\",\n  \"require\": {}\n}\n",
+    "src/Gate.php": "<?php\n\nfinal class Gate\n{\n    public static function enabled(bool $value): bool\n    {\n        return $value === true;\n    }\n}\n",
+    "tests/gate_test.php": "<?php\n\nrequire __DIR__ . '/../src/Gate.php';\n\nif (!Gate::enabled(true)) {\n    fwrite(STDERR, \"CASE GateTest::keepsEnabled\\n\");\n    fwrite(STDERR, \"FAIL tests/gate_test.php:11\\n\");\n    exit(1);\n}\n\nassert(Gate::enabled(true));\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

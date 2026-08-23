@@ -1,0 +1,72 @@
+{
+  "adapter": "rust-cargo",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "path",
+    "environment": {
+      "CARGO_HOME": "{specimen}/.cargo",
+      "CARGO_TARGET_DIR": "{specimen}/target",
+      "CARGO_TERM_COLOR": "never"
+    },
+    "rebuildCommands": [
+      [
+        "cargo",
+        "build",
+        "--manifest-path",
+        "{entry}/Cargo.toml",
+        "--locked",
+        "--tests"
+      ]
+    ],
+    "testCommand": [
+      "cargo",
+      "test",
+      "--manifest-path",
+      "{entry}/Cargo.toml",
+      "--locked",
+      "--workspace",
+      "--color",
+      "never"
+    ]
+  },
+  "languages": [
+    "rust"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "RUST_TOKEN_REPLACEMENT",
+        "pattern": "\\bfalse\\b|\\btrue\\b|!=|==|&&|\\|\\|",
+        "replacements": {
+          "!=": "==",
+          "&&": "||",
+          "==": "!=",
+          "false": "true",
+          "true": "false",
+          "||": "&&"
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bassert!\\s*\\(",
+      "\\bassert_eq!\\s*\\("
+    ],
+    "locationPatterns": [
+      "at (?P<path>[^:\\r\\n]+\\.rs):(?P<line>\\d+):\\d+"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^test (?P<test>[^ ]+) \\.\\.\\. FAILED$"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".rs"
+  ]
+}

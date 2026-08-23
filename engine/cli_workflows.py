@@ -8,10 +8,11 @@ import shutil
 import subprocess
 
 from engine.mutation_adapters import (
+    adapter_available,
     discover_mutations,
     run_adapter_tests,
-    supported_cycle_adapters,
 )
+from engine.coal_contracts import resolve_coal_contract
 from engine.target_intake import inspect_target
 
 
@@ -127,11 +128,27 @@ def target_entry_ready(
     adapter: str,
     entry: str,
 ) -> bool:
-    if adapter == "javascript":
+    contract = resolve_coal_contract(
+        adapter,
+        root,
+    )
+
+    if contract is None:
+        return False
+
+    entry_kind = contract.execution.entry_kind
+
+    if entry_kind == "script":
         return javascript_entry_ready(
             root,
             entry,
         )
+
+    if entry_kind == "none":
+        return True
+
+    if entry_kind == "opaque":
+        return bool(entry.strip())
 
     target = (
         root
@@ -156,14 +173,14 @@ def inspect_candidates(
         target
     )
 
-    if adapter not in supported_cycle_adapters():
-        raise RuntimeError(
-            f"unsupported cycle adapter: {adapter}"
-        )
-
     root = Path(
         identity.repository_root
     ).resolve()
+
+    if not adapter_available(adapter, root):
+        raise RuntimeError(
+            f"coal contract not found for adapter: {adapter}"
+        )
 
     candidates = discover_mutations(
         adapter,
@@ -248,14 +265,14 @@ def preflight_target(
             "CLEAN_SOURCE_REQUIRED"
         )
 
-    adapter_supported = (
-        adapter
-        in supported_cycle_adapters()
+    adapter_supported = adapter_available(
+        adapter,
+        root,
     )
 
     if not adapter_supported:
         blockers.append(
-            "ADAPTER_UNSUPPORTED"
+            "COAL_CONTRACT_MISSING"
         )
 
     entry_ready = False

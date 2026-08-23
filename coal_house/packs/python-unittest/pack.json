@@ -1,0 +1,23 @@
+{
+  "adapter": "python-unittest",
+  "buildSystems": [
+    "python-compileall"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "pyproject.toml",
+    "requirements.txt"
+  ],
+  "runtimeProbes": [
+    [
+      "python",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "python-unittest"
+  ],
+  "venvAdapter": "python-runtime"
+}

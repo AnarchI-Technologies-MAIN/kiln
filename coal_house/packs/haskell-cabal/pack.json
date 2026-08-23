@@ -1,0 +1,23 @@
+{
+  "adapter": "haskell-cabal",
+  "buildSystems": [
+    "cabal"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "cabal.project",
+    "kiln-coal-fixture.cabal"
+  ],
+  "runtimeProbes": [
+    [
+      "cabal",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "cabal-test"
+  ],
+  "venvAdapter": "haskell-cabal"
+}

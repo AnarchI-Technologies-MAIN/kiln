@@ -1,0 +1,23 @@
+{
+  "adapter": "zig",
+  "buildSystems": [
+    "zig-build"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "build.zig",
+    "build.zig.zon"
+  ],
+  "runtimeProbes": [
+    [
+      "zig",
+      "version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "zig-test"
+  ],
+  "venvAdapter": "zig-cache"
+}

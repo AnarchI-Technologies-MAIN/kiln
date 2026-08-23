@@ -1,0 +1,23 @@
+{
+  "adapter": "rust-cargo",
+  "buildSystems": [
+    "cargo"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "Cargo.lock",
+    "Cargo.toml"
+  ],
+  "runtimeProbes": [
+    [
+      "cargo",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "cargo-test"
+  ],
+  "venvAdapter": "rust-cargo"
+}

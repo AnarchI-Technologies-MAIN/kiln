@@ -1,0 +1,25 @@
+{
+  "adapter": "haskell-cabal",
+  "build_systems": [
+    "cabal"
+  ],
+  "contract_hash": "16979524215b74560b5be6a60f128145d81d1fa47646f62e7e565157a3485798",
+  "disposition": "COAL_RUNTIME_UNAVAILABLE",
+  "environment": "specimen-local",
+  "implemented": true,
+  "languages": [
+    "haskell"
+  ],
+  "metal_earned": false,
+  "missing_commands": [
+    "cabal"
+  ],
+  "production_proven": false,
+  "runtime_available": false,
+  "runtime_versions": [],
+  "schema": "kiln.coal-capability.v1",
+  "test_runners": [
+    "cabal-test"
+  ],
+  "venv_adapter": "haskell-cabal"
+}

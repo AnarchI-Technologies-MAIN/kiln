@@ -1,0 +1,22 @@
+{
+  "adapter": "lua",
+  "buildSystems": [
+    "lua-module-path"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    ".luacheckrc"
+  ],
+  "runtimeProbes": [
+    [
+      "lua",
+      "-v"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "lua-script"
+  ],
+  "venvAdapter": "lua-path"
+}

@@ -1,0 +1,11 @@
+{
+  "adapter": "go",
+  "entry": "",
+  "failureOutput": "--- FAIL: TestKeepsEnabled (0.00s)\n    gate_test.go:7: expected enabled state\n",
+  "files": {
+    "gate.go": "package kilnfixture\n\nfunc Enabled(value bool) bool {\n\treturn value == true\n}\n",
+    "gate_test.go": "package kilnfixture\n\nimport \"testing\"\n\nfunc TestKeepsEnabled(t *testing.T) {\n\tif !Enabled(true) {\n\t\tt.Fatalf(\"expected enabled state\")\n\t}\n}\n",
+    "go.mod": "module example.invalid/kilnfixture\n\ngo 1.22\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

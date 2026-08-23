@@ -1,0 +1,23 @@
+{
+  "adapter": "dotnet",
+  "buildSystems": [
+    "msbuild"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "*.csproj",
+    "*.sln"
+  ],
+  "runtimeProbes": [
+    [
+      "dotnet",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "dotnet-test"
+  ],
+  "venvAdapter": "dotnet-nuget"
+}

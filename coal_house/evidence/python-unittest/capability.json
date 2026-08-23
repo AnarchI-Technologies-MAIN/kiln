@@ -1,0 +1,28 @@
+{
+  "adapter": "python-unittest",
+  "build_systems": [
+    "python-compileall"
+  ],
+  "contract_hash": "47fac45d67d51d9515fcf9c4515f4842c5dc14de1849b8f2792175623775d2b4",
+  "disposition": "COAL_PRODUCTION_PROVEN",
+  "environment": "specimen-local",
+  "implemented": true,
+  "languages": [
+    "python"
+  ],
+  "metal_earned": true,
+  "missing_commands": [],
+  "production_proven": true,
+  "runtime_available": true,
+  "runtime_versions": [
+    [
+      "python",
+      "Python 3.12.10"
+    ]
+  ],
+  "schema": "kiln.coal-capability.v1",
+  "test_runners": [
+    "python-unittest"
+  ],
+  "venv_adapter": "python-runtime"
+}

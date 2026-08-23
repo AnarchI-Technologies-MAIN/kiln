@@ -6,8 +6,14 @@ from pathlib import Path
 from typing import Tuple
 import json
 import re
+from urllib.parse import unquote, urlparse
 
 from engine.behavioral_fragments import fragment_identity
+from engine.coal_contracts import (
+    coal_failure_locations,
+    coal_failure_test_ids,
+    resolve_coal_contract,
+)
 from engine.fragment_contracts import (
     FRAGMENT_CONTRACT_VERSION,
     AssertionRecord,
@@ -86,6 +92,18 @@ def failure_test_ids(output: str) -> Tuple[str, ...]:
             match.group(1)
         )
 
+    node_pattern = re.compile(
+        r"^test at (.+?\.(?:cjs|js|jsx|mjs|ts|tsx)):(\d+):\d+\s*$",
+        re.MULTILINE,
+    )
+
+    for match in node_pattern.finditer(output):
+        discovered.add(
+            match.group(1).replace("\\", "/")
+            + ":"
+            + match.group(2)
+        )
+
     return tuple(
         sorted(discovered)
     )
@@ -127,12 +145,55 @@ def traceback_locations(
     )
 
 
+def javascript_traceback_locations(
+    output: str,
+) -> Tuple[tuple[str, int], ...]:
+    locations = set()
+    pattern = re.compile(
+        r"(?:\(|\s)(file:///[^\s)]+?\.(?:cjs|js|jsx|mjs|ts|tsx))"
+        r":(\d+):\d+\)?",
+        re.MULTILINE,
+    )
+
+    for match in pattern.finditer(output):
+        locations.add((
+            match.group(1),
+            int(match.group(2)),
+        ))
+
+    path_pattern = re.compile(
+        r"(?:\(|\s)((?:[A-Za-z]:[\\/]|/)[^\s)]+?"
+        r"\.(?:cjs|js|jsx|mjs|ts|tsx)):(\d+):\d+\)?",
+        re.MULTILINE,
+    )
+
+    for match in path_pattern.finditer(output):
+        locations.add((
+            match.group(1),
+            int(match.group(2)),
+        ))
+
+    return tuple(sorted(locations))
+
+
 def stable_source_location(
     specimen: Path,
     raw_path: str,
 ) -> tuple[Path, str] | None:
     root = Path(specimen).resolve()
-    path = Path(raw_path)
+    normalized_path = raw_path
+
+    if raw_path.startswith("file://"):
+        parsed = urlparse(raw_path)
+        normalized_path = unquote(parsed.path)
+
+        if re.match(
+            r"^/[A-Za-z]:/",
+            normalized_path,
+        ):
+            normalized_path = normalized_path[1:]
+
+    path = Path(normalized_path)
 
     if not path.is_absolute():
         path = root / path
@@ -198,7 +259,12 @@ def build_proof_metadata(
     fragment_contracts = {}
     fragment_proof_links = {}
 
-    if adapter != "python":
+    coal_contract = resolve_coal_contract(
+        adapter,
+        specimen,
+    )
+
+    if coal_contract is None:
         return ProofMetadata(
             detected_test_ids=tuple(sorted(tests)),
             invariant_refs=(),
@@ -209,9 +275,26 @@ def build_proof_metadata(
             fragment_proof_links=(),
         )
 
-    for raw_path, line in traceback_locations(
-        output
-    ):
+    tests.update(
+        coal_failure_test_ids(
+            coal_contract,
+            output,
+        )
+    )
+
+    if coal_contract.proof.parser == "python":
+        locations = traceback_locations(output)
+    elif coal_contract.proof.parser == "javascript":
+        locations = javascript_traceback_locations(
+            output
+        )
+    else:
+        locations = coal_failure_locations(
+            coal_contract,
+            output,
+        )
+
+    for raw_path, line in locations:
         stable = stable_source_location(
             specimen,
             raw_path,
@@ -227,7 +310,8 @@ def build_proof_metadata(
         }
 
         if (
-            "tests" not in relative_parts
+            coal_contract.proof.parser in {"python", "javascript"}
+            and "tests" not in relative_parts
             and not Path(relative).name.lower().startswith("test_")
         ):
             continue
@@ -243,22 +327,22 @@ def build_proof_metadata(
         if located is None:
             continue
 
-        contract = located.contract
-        tests.add(contract.test_id)
-        fragments.add(contract.fragment_id)
+        fragment_contract = located.contract
+        tests.add(fragment_contract.test_id)
+        fragments.add(fragment_contract.fragment_id)
         invariant_id = invariant_identity(
             relative,
-            contract.start_line,
+            fragment_contract.start_line,
             "\0".join((
-                contract.test_id,
-                contract.fragment_id,
-                contract.expected_outcome,
+                fragment_contract.test_id,
+                fragment_contract.fragment_id,
+                fragment_contract.expected_outcome,
             )),
         )
         invariants.add(invariant_id)
         fragment_contracts[
-            contract.contract_id
-        ] = contract
+            fragment_contract.contract_id
+        ] = fragment_contract
 
         if located.assertion is not None:
             assertion = located.assertion
@@ -272,10 +356,10 @@ def build_proof_metadata(
         link = proof_link(
             mutation_id
             or "UNBOUND-MUTATION",
-            contract.fragment_id,
-            contract.test_id,
+            fragment_contract.fragment_id,
+            fragment_contract.test_id,
             (invariant_id,),
-            contract.assertion_refs,
+            fragment_contract.assertion_refs,
             "TEST_FAILURE_OBSERVED",
         )
         fragment_proof_links[

@@ -1,0 +1,28 @@
+{
+  "adapter": "rust-cargo",
+  "build_systems": [
+    "cargo"
+  ],
+  "contract_hash": "c3f219f6d007c7667dbc3687c28e22bb140b6764ebb762c7d78316fc9cc2cfa8",
+  "disposition": "COAL_PRODUCTION_PROVEN",
+  "environment": "specimen-local",
+  "implemented": true,
+  "languages": [
+    "rust"
+  ],
+  "metal_earned": true,
+  "missing_commands": [],
+  "production_proven": true,
+  "runtime_available": true,
+  "runtime_versions": [
+    [
+      "cargo",
+      "cargo 1.97.1 (c980f4866 2026-06-30)"
+    ]
+  ],
+  "schema": "kiln.coal-capability.v1",
+  "test_runners": [
+    "cargo-test"
+  ],
+  "venv_adapter": "rust-cargo"
+}

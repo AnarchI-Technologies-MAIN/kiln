@@ -11,6 +11,7 @@ from engine.cycle_orchestrator import (
 )
 from engine.mutation_adapters import (
     discover_javascript_mutations,
+    discover_mutations,
     discover_powershell_mutations,
     discover_wsl2_mutations,
     run_adapter_tests,
@@ -111,16 +112,16 @@ class MutationAdapterTests(unittest.TestCase):
         )
 
     def test_registry_exposes_all_v011_cycle_adapters(self):
-        self.assertEqual(
-            supported_cycle_adapters(),
-            (
-                "python",
-                "javascript",
-                "powershell",
-                "wsl2",
-                "api-service",
-            ),
-        )
+        adapters = supported_cycle_adapters()
+
+        for adapter in (
+            "python",
+            "javascript",
+            "powershell",
+            "wsl2",
+            "api-service",
+        ):
+            self.assertIn(adapter, adapters)
 
     def test_javascript_discovery_is_deterministic(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -147,6 +148,19 @@ class MutationAdapterTests(unittest.TestCase):
             self.assertEqual(
                 first[0].replacement_token,
                 "false",
+            )
+
+    def test_javascript_contract_preserves_specialized_candidate_set(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.js").write_text(
+                "const enabled = value === true && other !== false;\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                discover_mutations("javascript", root),
+                discover_javascript_mutations(root),
             )
 
     def test_powershell_discovery_is_deterministic(self):

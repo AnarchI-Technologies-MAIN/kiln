@@ -1,0 +1,28 @@
+{
+  "adapter": "kotlin-gradle",
+  "baseline_passed": false,
+  "blockers": [
+    "runtime unavailable: gradle"
+  ],
+  "cleanup_complete": false,
+  "contract_hash": "c50ae221fee91dcad7d861ea69d7184816f8acea4fee811c4f07b5a8dcf05b6d",
+  "destructive_trial_passed": false,
+  "deterministic_replay": false,
+  "disposition": "COAL_QUALIFICATION_BLOCKED_RUNTIME_UNAVAILABLE",
+  "fixture_qualified": false,
+  "fractures_observed": 0,
+  "metal_earned": false,
+  "mutation_candidate_count": 0,
+  "production_commit": "",
+  "production_fractures": 0,
+  "production_proven": false,
+  "production_survivors": [],
+  "production_target_id": "",
+  "replay_hashes": [],
+  "restoration_complete": false,
+  "runtime_available": false,
+  "schema": "kiln.coal-qualification.v1",
+  "source_preserved": false,
+  "survivors": [],
+  "truthful_proof": false
+}

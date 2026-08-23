@@ -1,0 +1,10 @@
+{
+  "adapter": "java-maven",
+  "directories": [
+    ".m2/repository"
+  ],
+  "environment": {
+    "MAVEN_OPTS": "-Dmaven.repo.local={specimen}/.m2/repository"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

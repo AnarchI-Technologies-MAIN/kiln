@@ -1,0 +1,9 @@
+{
+  "adapter": "zig-cache",
+  "directories": [
+    "zig-cache",
+    "zig-global-cache"
+  ],
+  "environment": {},
+  "schema": "kiln.coal-venv.v1"
+}

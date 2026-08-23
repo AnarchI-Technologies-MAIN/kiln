@@ -1,0 +1,10 @@
+{
+  "adapter": "lua-path",
+  "directories": [
+    ".kiln/lua"
+  ],
+  "environment": {
+    "LUA_PATH": "{specimen}/?.lua;{specimen}/?/init.lua;;"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

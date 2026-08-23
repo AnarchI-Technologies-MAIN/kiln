@@ -14,8 +14,8 @@ from engine.proof_metadata import (
     validate_proof_metadata_payload,
 )
 from engine.mutation_adapters import (
+    adapter_available,
     discover_mutations,
-    supported_cycle_adapters,
 )
 from engine.sandbox_execution import (
     PROOF_EVIDENCE_VERSION,
@@ -824,8 +824,10 @@ def run_cycle(
     candidate_id: str = "",
     workers: int = 1,
 ) -> CycleResult:
-    if adapter not in supported_cycle_adapters():
-        raise RuntimeError(f"unsupported cycle adapter: {adapter}")
+    if not adapter_available(adapter, Path(target)):
+        raise RuntimeError(
+            f"coal contract not found for adapter: {adapter}"
+        )
 
     if max_passes < 1:
         raise RuntimeError("cycle max passes must be positive")

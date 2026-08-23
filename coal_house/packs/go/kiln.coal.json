@@ -1,0 +1,66 @@
+{
+  "adapter": "go",
+  "contractVersion": "KILN-COAL-CONTRACT-1",
+  "execution": {
+    "appendEntry": false,
+    "driver": "command",
+    "entryKind": "none",
+    "environment": {
+      "GOCACHE": "{specimen}/.kiln/go-cache",
+      "GOMODCACHE": "{specimen}/.kiln/go-mod-cache",
+      "GOPATH": "{specimen}/.kiln/go-path"
+    },
+    "rebuildCommands": [
+      [
+        "go",
+        "test",
+        "./...",
+        "-run",
+        "^$"
+      ]
+    ],
+    "testCommand": [
+      "go",
+      "test",
+      "./...",
+      "-count=1"
+    ]
+  },
+  "languages": [
+    "go"
+  ],
+  "mutation": {
+    "rules": [
+      {
+        "ignoreCase": false,
+        "kind": "GO_TOKEN_REPLACEMENT",
+        "pattern": "\\bfalse\\b|\\btrue\\b|!=|==|&&|\\|\\|",
+        "replacements": {
+          "!=": "==",
+          "&&": "||",
+          "==": "!=",
+          "false": "true",
+          "true": "false",
+          "||": "&&"
+        }
+      }
+    ],
+    "strategy": "text-rules"
+  },
+  "proof": {
+    "assertionPatterns": [
+      "\\bt\\.(?:Errorf?|Fatalf?)\\s*\\("
+    ],
+    "locationPatterns": [
+      "^\\s*(?P<path>[^:\\r\\n]+\\.go):(?P<line>\\d+):"
+    ],
+    "parser": "generic",
+    "testPatterns": [
+      "^--- FAIL: (?P<test>\\S+)"
+    ]
+  },
+  "schema": "kiln.coal-contract.v1",
+  "sourceExtensions": [
+    ".go"
+  ]
+}

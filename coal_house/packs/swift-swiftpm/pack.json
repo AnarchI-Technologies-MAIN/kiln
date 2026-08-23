@@ -1,0 +1,23 @@
+{
+  "adapter": "swift-swiftpm",
+  "buildSystems": [
+    "swift-package-manager"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "Package.resolved",
+    "Package.swift"
+  ],
+  "runtimeProbes": [
+    [
+      "swift",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "xctest"
+  ],
+  "venvAdapter": "swift-swiftpm"
+}

@@ -1,0 +1,28 @@
+{
+  "adapter": "ruby-bundler",
+  "baseline_passed": false,
+  "blockers": [
+    "runtime unavailable: bundle, ruby"
+  ],
+  "cleanup_complete": false,
+  "contract_hash": "c2d4da603d0e7508a8d1c4e0dde0ca8c015e89a3bb5b46e1651023e9fbd8da61",
+  "destructive_trial_passed": false,
+  "deterministic_replay": false,
+  "disposition": "COAL_QUALIFICATION_BLOCKED_RUNTIME_UNAVAILABLE",
+  "fixture_qualified": false,
+  "fractures_observed": 0,
+  "metal_earned": false,
+  "mutation_candidate_count": 0,
+  "production_commit": "",
+  "production_fractures": 0,
+  "production_proven": false,
+  "production_survivors": [],
+  "production_target_id": "",
+  "replay_hashes": [],
+  "restoration_complete": false,
+  "runtime_available": false,
+  "schema": "kiln.coal-qualification.v1",
+  "source_preserved": false,
+  "survivors": [],
+  "truthful_proof": false
+}

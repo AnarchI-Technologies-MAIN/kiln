@@ -10,32 +10,95 @@ import subprocess
 
 
 MANIFEST_NAMES = {
+    "CMakeLists.txt",
     "Cargo.toml",
+    "DESCRIPTION",
     "Dockerfile",
+    "Gemfile",
+    "Makefile",
+    "Package.swift",
+    "Package.resolved",
+    "build.gradle",
+    "build.gradle.kts",
+    "build.zig",
+    "cabal.project",
+    "composer.json",
+    "deno.json",
+    "deno.jsonc",
+    "go.work",
     "go.mod",
+    "kiln.coal.json",
+    "mix.exs",
     "package.json",
+    "pom.xml",
     "pyproject.toml",
+    "pubspec.lock",
+    "pubspec.yaml",
     "requirements.txt",
     "setup.cfg",
     "setup.py",
 }
 
 
+MANIFEST_SUFFIXES = {
+    ".cabal",
+    ".csproj",
+    ".fsproj",
+    ".sln",
+    ".vbproj",
+}
+
+
 LANGUAGE_BY_SUFFIX = {
     ".c": "c",
+    ".cc": "cpp",
+    ".clj": "clojure",
+    ".cljs": "clojure",
     ".cpp": "cpp",
+    ".cxx": "cpp",
     ".cs": "csharp",
+    ".dart": "dart",
+    ".erl": "erlang",
+    ".ex": "elixir",
+    ".exs": "elixir",
+    ".fs": "fsharp",
+    ".fsx": "fsharp",
     ".go": "go",
+    ".groovy": "groovy",
+    ".h": "c",
+    ".hpp": "cpp",
+    ".hs": "haskell",
     ".java": "java",
     ".js": "javascript",
+    ".jsx": "javascript",
     ".kt": "kotlin",
+    ".kts": "kotlin",
+    ".lhs": "haskell",
+    ".lua": "lua",
+    ".mjs": "javascript",
+    ".ml": "ocaml",
+    ".mli": "ocaml",
+    ".nim": "nim",
+    ".pl": "perl",
+    ".pm": "perl",
     ".php": "php",
     ".ps1": "powershell",
     ".py": "python",
+    ".r": "r",
     ".rb": "ruby",
     ".rs": "rust",
+    ".scala": "scala",
     ".sh": "shell",
+    ".sol": "solidity",
+    ".sql": "sql",
+    ".svelte": "svelte",
+    ".swift": "swift",
+    ".tcl": "tcl",
     ".ts": "typescript",
+    ".tsx": "typescript",
+    ".vb": "visual-basic",
+    ".vue": "vue",
+    ".zig": "zig",
 }
 
 
@@ -108,7 +171,10 @@ def discover_hints(root: Path):
         if language:
             languages.add(language)
 
-        if path.name in MANIFEST_NAMES:
+        if (
+            path.name in MANIFEST_NAMES
+            or path.suffix.lower() in MANIFEST_SUFFIXES
+        ):
             manifests.add(
                 path.relative_to(root).as_posix()
             )

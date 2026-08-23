@@ -1,0 +1,11 @@
+{
+  "adapter": "java-maven",
+  "entry": "",
+  "failureOutput": "CASE kiln.fixture.GateTest.keepsEnabled\nFAIL src/test/java/kiln/fixture/GateTest.java:13\n",
+  "files": {
+    "pom.xml": "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\">\n  <modelVersion>4.0.0</modelVersion>\n  <groupId>kiln.fixture</groupId>\n  <artifactId>kiln-coal-fixture</artifactId>\n  <version>0.1.0</version>\n  <properties><maven.compiler.release>17</maven.compiler.release><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding><junit.version>5.11.0</junit.version></properties>\n  <dependencies><dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>${junit.version}</version><scope>test</scope></dependency></dependencies>\n  <build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.5.0</version></plugin></plugins></build>\n</project>\n",
+    "src/main/java/kiln/fixture/Gate.java": "package kiln.fixture;\n\npublic final class Gate {\n    private Gate() {}\n\n    public static boolean enabled(boolean value) {\n        return value == true;\n    }\n}\n",
+    "src/test/java/kiln/fixture/GateTest.java": "package kiln.fixture;\n\nimport static org.junit.jupiter.api.Assertions.assertTrue;\nimport org.junit.jupiter.api.Test;\n\nfinal class GateTest {\n    @Test\n    void keepsEnabled() {\n        if (!Gate.enabled(true)) {\n            System.err.println(\"CASE kiln.fixture.GateTest.keepsEnabled\");\n            System.err.println(\"FAIL src/test/java/kiln/fixture/GateTest.java:13\");\n        }\n        assertTrue(Gate.enabled(true));\n    }\n}\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

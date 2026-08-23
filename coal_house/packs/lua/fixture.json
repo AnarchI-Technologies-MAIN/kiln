@@ -1,0 +1,10 @@
+{
+  "adapter": "lua",
+  "entry": "",
+  "failureOutput": "CASE gate.keeps_enabled\nFAIL tests/gate_test.lua:9\n",
+  "files": {
+    "gate.lua": "local gate = {}\n\nfunction gate.enabled(value)\n  return value == true\nend\n\nreturn gate\n",
+    "tests/gate_test.lua": "local gate = require('gate')\n\nif not gate.enabled(true) then\n  io.stderr:write('CASE gate.keeps_enabled\\n')\n  io.stderr:write('FAIL tests/gate_test.lua:9\\n')\n  os.exit(1)\nend\n\nassert(gate.enabled(true))\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

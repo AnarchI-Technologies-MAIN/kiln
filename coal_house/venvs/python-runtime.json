@@ -1,0 +1,10 @@
+{
+  "adapter": "python-runtime",
+  "directories": [
+    ".kiln/pycache"
+  ],
+  "environment": {
+    "PYTHONPYCACHEPREFIX": "{specimen}/.kiln/pycache"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

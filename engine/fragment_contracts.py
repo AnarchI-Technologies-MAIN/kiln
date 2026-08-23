@@ -6,10 +6,15 @@ from pathlib import Path
 from typing import Tuple
 import ast
 import builtins
+import re
 
 from engine.behavioral_fragments import (
     classify_python_statement,
     fragment_identity,
+)
+from engine.coal_contracts import (
+    coal_assertion_matches,
+    resolve_coal_contract,
 )
 
 
@@ -102,6 +107,25 @@ class FragmentCompatibility:
 class LocatedFragment:
     contract: FragmentContract
     assertion: AssertionRecord | None
+
+
+@dataclass(frozen=True)
+class JavaScriptTestBlock:
+    name: str
+    start_line: int
+    end_line: int
+    body_start_line: int
+    body_end_line: int
+
+
+@dataclass(frozen=True)
+class JavaScriptStatement:
+    start_line: int
+    end_line: int
+    source_text: str
+    role: str
+    required_symbols: Tuple[str, ...]
+    provided_symbols: Tuple[str, ...]
 
 
 def canonical_text(text: str) -> str:
@@ -509,6 +533,809 @@ def behavior_claim(role: str) -> str:
     return claims[role]
 
 
+def javascript_syntax_mask(source: str) -> str:
+    """Mask JavaScript strings and comments while preserving offsets."""
+    characters = list(canonical_text(source))
+    masked = characters.copy()
+    index = 0
+    state = "CODE"
+    quote = ""
+
+    while index < len(characters):
+        current = characters[index]
+        following = (
+            characters[index + 1]
+            if index + 1 < len(characters)
+            else ""
+        )
+
+        if state == "CODE":
+            if current == "/" and following == "/":
+                masked[index] = " "
+                masked[index + 1] = " "
+                state = "LINE_COMMENT"
+                index += 2
+                continue
+
+            if current == "/" and following == "*":
+                masked[index] = " "
+                masked[index + 1] = " "
+                state = "BLOCK_COMMENT"
+                index += 2
+                continue
+
+            if current in {"'", '"', "`"}:
+                quote = current
+                masked[index] = " "
+                state = "STRING"
+                index += 1
+                continue
+
+            index += 1
+            continue
+
+        if state == "LINE_COMMENT":
+            if current == "\n":
+                state = "CODE"
+            else:
+                masked[index] = " "
+
+            index += 1
+            continue
+
+        if state == "BLOCK_COMMENT":
+            if current == "*" and following == "/":
+                masked[index] = " "
+                masked[index + 1] = " "
+                state = "CODE"
+                index += 2
+                continue
+
+            if current != "\n":
+                masked[index] = " "
+
+            index += 1
+            continue
+
+        if current == "\\":
+            masked[index] = " "
+
+            if index + 1 < len(characters):
+                if characters[index + 1] != "\n":
+                    masked[index + 1] = " "
+                index += 2
+                continue
+
+        if current == quote:
+            masked[index] = " "
+            state = "CODE"
+            index += 1
+            continue
+
+        if current != "\n":
+            masked[index] = " "
+
+        index += 1
+
+    return "".join(masked)
+
+
+def javascript_matching_brace(
+    masked_source: str,
+    opening: int,
+) -> int | None:
+    depth = 0
+
+    for index in range(opening, len(masked_source)):
+        current = masked_source[index]
+
+        if current == "{":
+            depth += 1
+        elif current == "}":
+            depth -= 1
+
+            if depth == 0:
+                return index
+
+    return None
+
+
+def javascript_test_blocks(
+    source: str,
+) -> Tuple[JavaScriptTestBlock, ...]:
+    normalized = canonical_text(source)
+    masked = javascript_syntax_mask(normalized)
+    pattern = re.compile(
+        r"\b(?:test|it)(?:\.(?:only|skip|todo))?\s*\(\s*"
+        r'(?:"(?P<double>(?:\\.|[^"\\])*)"|'
+        r"'(?P<single>(?:\\.|[^'\\])*)')\s*,"
+    )
+    blocks = []
+
+    for match in pattern.finditer(normalized):
+        declaration = masked[
+            match.start():match.end()
+        ]
+
+        if re.match(
+            r"\b(?:test|it)(?:\.(?:only|skip|todo))?\s*\(",
+            declaration,
+        ) is None:
+            continue
+
+        arrow = masked.find("=>", match.end())
+        function = re.search(
+            r"\b(?:async\s+)?function\b",
+            masked[match.end():],
+        )
+        function_index = (
+            match.end() + function.start()
+            if function is not None
+            else -1
+        )
+        callback_markers = tuple(
+            item
+            for item in (arrow, function_index)
+            if item >= 0
+        )
+
+        if not callback_markers:
+            continue
+
+        callback = min(callback_markers)
+        opening = masked.find("{", callback)
+
+        if opening < 0:
+            continue
+
+        closing = javascript_matching_brace(
+            masked,
+            opening,
+        )
+
+        if closing is None:
+            continue
+
+        name = (
+            match.group("double")
+            if match.group("double") is not None
+            else match.group("single")
+        )
+        name = re.sub(r"\\(['\"\\])", r"\1", name)
+        start_line = normalized.count(
+            "\n",
+            0,
+            match.start(),
+        ) + 1
+        opening_line = normalized.count(
+            "\n",
+            0,
+            opening,
+        ) + 1
+        closing_line = normalized.count(
+            "\n",
+            0,
+            closing,
+        ) + 1
+        blocks.append(
+            JavaScriptTestBlock(
+                name=name,
+                start_line=start_line,
+                end_line=closing_line,
+                body_start_line=opening_line + 1,
+                body_end_line=max(
+                    opening_line,
+                    closing_line - 1,
+                ),
+            )
+        )
+
+    return tuple(
+        sorted(
+            blocks,
+            key=lambda item: (
+                item.start_line,
+                item.end_line,
+                item.name,
+            ),
+        )
+    )
+
+
+def classify_javascript_statement(
+    source_text: str,
+) -> str:
+    masked = javascript_syntax_mask(source_text)
+
+    if re.search(
+        r"\b(?:assert(?:\.[A-Za-z_$][\w$]*)?|expect)\s*\(",
+        masked,
+    ):
+        return "ASSERTION"
+
+    if re.search(
+        r"\b(?:rm|unlink|remove|cleanup|tearDown)[A-Za-z_$]*\s*\(",
+        masked,
+        re.IGNORECASE,
+    ):
+        return "CLEANUP"
+
+    if re.search(
+        r"\b(?:mock|stub|spy|inject)[A-Za-z_$]*\s*\(",
+        masked,
+        re.IGNORECASE,
+    ):
+        return "INJECTION"
+
+    if re.match(
+        r"\s*(?:const|let|var)\b",
+        masked,
+    ):
+        return "SETUP"
+
+    return "ACTION"
+
+
+def javascript_statement_symbols(
+    source_text: str,
+) -> tuple[Tuple[str, ...], Tuple[str, ...]]:
+    masked = javascript_syntax_mask(source_text)
+    provided = set(
+        re.findall(
+            r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)",
+            masked,
+        )
+    )
+    required = set(
+        re.findall(
+            r"(?<![\w$.])([A-Za-z_$][\w$]*)\s*(?=\.|\()",
+            masked,
+        )
+    )
+    required.difference_update({
+        "await",
+        "catch",
+        "for",
+        "function",
+        "if",
+        "switch",
+        "while",
+    })
+    required.difference_update(provided)
+
+    return (
+        tuple(sorted(required)),
+        tuple(sorted(provided)),
+    )
+
+
+def javascript_statements(
+    source: str,
+    block: JavaScriptTestBlock,
+) -> Tuple[JavaScriptStatement, ...]:
+    normalized = canonical_text(source)
+    lines = normalized.splitlines(
+        keepends=True
+    )
+    masked_lines = javascript_syntax_mask(
+        normalized
+    ).splitlines(keepends=True)
+    statements = []
+    start_line = None
+
+    for line_number in range(
+        block.body_start_line,
+        block.body_end_line + 1,
+    ):
+        masked_line = masked_lines[
+            line_number - 1
+        ]
+        stripped = masked_line.strip()
+
+        if not stripped:
+            continue
+
+        if re.fullmatch(
+            r"[{}]+(?:\s*(?:else|finally|catch)\b[^{}]*)?",
+            stripped,
+        ):
+            start_line = None
+            continue
+
+        if (
+            stripped.endswith("{")
+            and ";" not in stripped
+        ):
+            start_line = None
+            continue
+
+        if start_line is None:
+            start_line = line_number
+
+        if stripped.endswith(";"):
+            text = "".join(
+                lines[start_line - 1:line_number]
+            )
+            required, provided = (
+                javascript_statement_symbols(text)
+            )
+            statements.append(
+                JavaScriptStatement(
+                    start_line=start_line,
+                    end_line=line_number,
+                    source_text=canonical_text(text),
+                    role=classify_javascript_statement(text),
+                    required_symbols=required,
+                    provided_symbols=provided,
+                )
+            )
+            start_line = None
+
+    return tuple(statements)
+
+
+def javascript_fragment_id(
+    test_id: str,
+    parent_source_hash: str,
+    statement: JavaScriptStatement,
+    position: int,
+) -> str:
+    return fragment_identity(
+        test_id,
+        parent_source_hash,
+        statement.start_line,
+        statement.end_line,
+        position,
+        statement.role,
+        semantic_hash(statement.source_text),
+    )
+
+
+def javascript_prerequisite_record(
+    test_id: str,
+    parent_source_hash: str,
+    relative_path: str,
+    statement: JavaScriptStatement,
+    position: int,
+) -> FragmentPrerequisite:
+    return FragmentPrerequisite(
+        fragment_id=javascript_fragment_id(
+            test_id,
+            parent_source_hash,
+            statement,
+            position,
+        ),
+        source_path=relative_path,
+        start_line=statement.start_line,
+        end_line=statement.end_line,
+        role=statement.role,
+        source_hash=semantic_hash(
+            statement.source_text
+        ),
+        source_text=statement.source_text,
+        required_symbols=statement.required_symbols,
+        provided_symbols=statement.provided_symbols,
+    )
+
+
+def javascript_ambient_symbols(
+    source: str,
+) -> Tuple[str, ...]:
+    masked = javascript_syntax_mask(source)
+    symbols = set(
+        re.findall(
+            r"\bimport\s+([A-Za-z_$][\w$]*)\s+from\b",
+            masked,
+        )
+    )
+
+    for group in re.findall(
+        r"\bimport\s*{([^}]*)}\s*from\b",
+        masked,
+    ):
+        for imported in group.split(","):
+            name = imported.strip().split()
+
+            if name:
+                symbols.add(name[-1])
+
+    symbols.update(
+        re.findall(
+            r"\bimport\s*\*\s*as\s*([A-Za-z_$][\w$]*)",
+            masked,
+        )
+    )
+
+    return tuple(sorted(symbols))
+
+
+def javascript_assertion_kind(
+    source_text: str,
+) -> str:
+    masked = javascript_syntax_mask(source_text)
+
+    if re.search(r"\bexpect\s*\(", masked):
+        return "JAVASCRIPT_EXPECT_CALL"
+
+    if re.search(r"\bassert(?:\.[A-Za-z_$][\w$]*)?\s*\(", masked):
+        return "NODE_ASSERT_CALL"
+
+    return "JAVASCRIPT_ASSERTION"
+
+
+def locate_javascript_fragment_contract(
+    path: Path,
+    relative_path: str,
+    line: int,
+    adapter: str,
+    entry: str,
+) -> LocatedFragment | None:
+    source = Path(path).read_text(
+        encoding="utf-8"
+    )
+    blocks = tuple(
+        block
+        for block in javascript_test_blocks(source)
+        if block.start_line <= line <= block.end_line
+    )
+
+    if not blocks:
+        return None
+
+    block = min(
+        blocks,
+        key=lambda item: (
+            item.end_line - item.start_line,
+            item.start_line,
+            item.name,
+        ),
+    )
+    statements = javascript_statements(
+        source,
+        block,
+    )
+    containing = tuple(
+        statement
+        for statement in statements
+        if statement.start_line <= line <= statement.end_line
+    )
+
+    if not containing:
+        return None
+
+    statement = min(
+        containing,
+        key=lambda item: (
+            item.end_line - item.start_line,
+            item.start_line,
+        ),
+    )
+    duplicate_names = sum(
+        1
+        for candidate in javascript_test_blocks(source)
+        if candidate.name == block.name
+    )
+    test_name = block.name
+
+    if duplicate_names > 1:
+        test_name += "@" + str(block.start_line)
+
+    test_id = relative_path + "::" + test_name
+    normalized_source = canonical_text(source)
+    parent_hash = semantic_hash(normalized_source)
+    position = statements.index(statement) + 1
+    preceding = tuple(
+        item
+        for item in statements
+        if item.end_line < statement.start_line
+    )
+    precondition_refs = tuple(
+        javascript_fragment_id(
+            test_id,
+            parent_hash,
+            item,
+            statements.index(item) + 1,
+        )
+        for item in preceding
+    )
+    preconditions = tuple(
+        javascript_prerequisite_record(
+            test_id,
+            parent_hash,
+            relative_path,
+            item,
+            statements.index(item) + 1,
+        )
+        for item in preceding
+    )
+    fragment_id = javascript_fragment_id(
+        test_id,
+        parent_hash,
+        statement,
+        position,
+    )
+    available_ambient = set(
+        javascript_ambient_symbols(source)
+    )
+    ambient = tuple(
+        sorted(
+            symbol
+            for symbol in statement.required_symbols
+            if symbol in available_ambient
+        )
+    )
+    supplied = set(available_ambient)
+
+    for item in preceding:
+        supplied.update(item.provided_symbols)
+
+    unresolved = tuple(
+        sorted(
+            symbol
+            for symbol in statement.required_symbols
+            if symbol not in supplied
+        )
+    )
+    outcome = expected_outcome(statement.role)
+    assertion = None
+    assertion_refs = ()
+
+    if statement.role == "ASSERTION":
+        assertion_id = contract_identity(
+            "KILN-ASSERTION-",
+            test_id,
+            relative_path,
+            str(statement.start_line),
+            str(statement.end_line),
+            semantic_hash(statement.source_text),
+            outcome,
+        )
+        assertion = AssertionRecord(
+            assertion_id=assertion_id,
+            test_id=test_id,
+            source_path=relative_path,
+            parent_source_hash=parent_hash,
+            start_line=statement.start_line,
+            end_line=statement.end_line,
+            assertion_kind=javascript_assertion_kind(
+                statement.source_text
+            ),
+            source_hash=semantic_hash(
+                statement.source_text
+            ),
+            source_text=statement.source_text,
+            expected_outcome=outcome,
+        )
+        assertion_refs = (assertion_id,)
+
+    fixtures = ()
+    compatibility_key = contract_identity(
+        "KILN-FRAGMENT-COMPAT-",
+        adapter,
+        statement.role,
+        "\0".join(statement.required_symbols),
+        "\0".join(statement.provided_symbols),
+        "",
+        outcome,
+    )
+    contract_id = contract_identity(
+        "KILN-FRAGMENT-CONTRACT-",
+        fragment_id,
+        adapter,
+        entry,
+        "\0".join(precondition_refs),
+        "",
+        "\0".join(statement.required_symbols),
+        "\0".join(statement.provided_symbols),
+        "",
+        outcome,
+    )
+    contract = FragmentContract(
+        contract_id=contract_id,
+        contract_version=FRAGMENT_CONTRACT_VERSION,
+        fragment_id=fragment_id,
+        test_id=test_id,
+        source_path=relative_path,
+        parent_source_hash=parent_hash,
+        start_line=statement.start_line,
+        end_line=statement.end_line,
+        sequence_position=position,
+        sequence_total=len(statements),
+        role=statement.role,
+        source_hash=semantic_hash(statement.source_text),
+        source_text=statement.source_text,
+        behavior_claim=behavior_claim(statement.role),
+        expected_outcome=outcome,
+        assertion_refs=assertion_refs,
+        precondition_fragment_refs=precondition_refs,
+        context_fragment_refs=(),
+        preconditions=preconditions,
+        contexts=(),
+        required_symbols=statement.required_symbols,
+        provided_symbols=statement.provided_symbols,
+        ambient_symbols=ambient,
+        unresolved_symbols=unresolved,
+        fixture_refs=fixtures,
+        adapter=adapter,
+        entry=entry,
+        reproduction_selector=test_id,
+        reproduction_scope="PARENT_TEST",
+        reproduction_state="DECLARATIVE_ONLY",
+        compatibility_key=compatibility_key,
+    )
+
+    return LocatedFragment(
+        contract=contract,
+        assertion=assertion,
+    )
+
+
+def specimen_root_for_source(
+    path: Path,
+    relative_path: str,
+) -> Path | None:
+    resolved = Path(path).resolve()
+    relative = Path(relative_path)
+    root = resolved
+
+    for _ in relative.parts:
+        root = root.parent
+
+    try:
+        if (root / relative).resolve() != resolved:
+            return None
+    except OSError:
+        return None
+
+    return root
+
+
+def locate_generic_fragment_contract(
+    path: Path,
+    relative_path: str,
+    line: int,
+    adapter: str,
+    entry: str,
+) -> LocatedFragment | None:
+    root = specimen_root_for_source(
+        path,
+        relative_path,
+    )
+
+    if root is None:
+        return None
+
+    coal = resolve_coal_contract(
+        adapter,
+        root,
+    )
+
+    if coal is None:
+        return None
+
+    source = canonical_text(
+        Path(path).read_text(encoding="utf-8")
+    )
+    lines = source.splitlines(keepends=True)
+
+    if line < 1 or line > len(lines):
+        return None
+
+    text = canonical_text(lines[line - 1])
+
+    if not text.strip():
+        return None
+
+    test_id = (
+        relative_path
+        + "::line-"
+        + str(line)
+    )
+    parent_hash = semantic_hash(source)
+    role = (
+        "ASSERTION"
+        if coal_assertion_matches(coal, text)
+        else "OBSERVATION"
+    )
+    outcome = expected_outcome(role)
+    text_hash = semantic_hash(text)
+    fragment_id = fragment_identity(
+        test_id,
+        parent_hash,
+        line,
+        line,
+        1,
+        role,
+        text_hash,
+    )
+    assertion = None
+    assertion_refs = ()
+
+    if role == "ASSERTION":
+        assertion_id = contract_identity(
+            "KILN-ASSERTION-",
+            test_id,
+            relative_path,
+            str(line),
+            str(line),
+            text_hash,
+            outcome,
+        )
+        assertion = AssertionRecord(
+            assertion_id=assertion_id,
+            test_id=test_id,
+            source_path=relative_path,
+            parent_source_hash=parent_hash,
+            start_line=line,
+            end_line=line,
+            assertion_kind="COAL_ASSERTION_PATTERN",
+            source_hash=text_hash,
+            source_text=text,
+            expected_outcome=outcome,
+        )
+        assertion_refs = (assertion_id,)
+
+    compatibility_key = contract_identity(
+        "KILN-FRAGMENT-COMPAT-",
+        adapter,
+        role,
+        "",
+        "",
+        "",
+        outcome,
+    )
+    contract_id = contract_identity(
+        "KILN-FRAGMENT-CONTRACT-",
+        fragment_id,
+        adapter,
+        entry,
+        "",
+        "",
+        "",
+        "",
+        "",
+        outcome,
+    )
+    contract = FragmentContract(
+        contract_id=contract_id,
+        contract_version=FRAGMENT_CONTRACT_VERSION,
+        fragment_id=fragment_id,
+        test_id=test_id,
+        source_path=relative_path,
+        parent_source_hash=parent_hash,
+        start_line=line,
+        end_line=line,
+        sequence_position=1,
+        sequence_total=1,
+        role=role,
+        source_hash=text_hash,
+        source_text=text,
+        behavior_claim=behavior_claim(role),
+        expected_outcome=outcome,
+        assertion_refs=assertion_refs,
+        precondition_fragment_refs=(),
+        context_fragment_refs=(),
+        preconditions=(),
+        contexts=(),
+        required_symbols=(),
+        provided_symbols=(),
+        ambient_symbols=(),
+        unresolved_symbols=(),
+        fixture_refs=(),
+        adapter=adapter,
+        entry=entry,
+        reproduction_selector=test_id,
+        reproduction_scope="PARENT_TEST",
+        reproduction_state="DECLARATIVE_ONLY",
+        compatibility_key=compatibility_key,
+    )
+
+    return LocatedFragment(
+        contract=contract,
+        assertion=assertion,
+    )
+
+
 def locate_fragment_contract(
     path: Path,
     relative_path: str,
@@ -516,6 +1343,24 @@ def locate_fragment_contract(
     adapter: str,
     entry: str,
 ) -> LocatedFragment | None:
+    if adapter == "javascript":
+        return locate_javascript_fragment_contract(
+            path,
+            relative_path,
+            line,
+            adapter,
+            entry,
+        )
+
+    if adapter != "python":
+        return locate_generic_fragment_contract(
+            path,
+            relative_path,
+            line,
+            adapter,
+            entry,
+        )
+
     source = Path(path).read_text(
         encoding="utf-8"
     )

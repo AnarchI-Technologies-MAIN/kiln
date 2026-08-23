@@ -1,0 +1,12 @@
+{
+  "adapter": "kotlin-gradle",
+  "entry": "",
+  "failureOutput": "CASE kiln.fixture.GateTest.keepsEnabled\nFAIL src/test/kotlin/kiln/fixture/GateTest.kt:13\n",
+  "files": {
+    "build.gradle.kts": "plugins { kotlin(\"jvm\") version \"2.0.20\" }\nrepositories { mavenCentral() }\ndependencies { testImplementation(kotlin(\"test\")) }\ntasks.test { useJUnitPlatform() }\n",
+    "settings.gradle.kts": "rootProject.name = \"kiln-coal-fixture\"\n",
+    "src/main/kotlin/kiln/fixture/Gate.kt": "package kiln.fixture\n\nobject Gate {\n    fun enabled(value: Boolean): Boolean = value == true\n}\n",
+    "src/test/kotlin/kiln/fixture/GateTest.kt": "package kiln.fixture\n\nimport kotlin.test.Test\nimport kotlin.test.assertTrue\n\nclass GateTest {\n    @Test\n    fun keepsEnabled() {\n        if (!Gate.enabled(true)) {\n            System.err.println(\"CASE kiln.fixture.GateTest.keepsEnabled\")\n            System.err.println(\"FAIL src/test/kotlin/kiln/fixture/GateTest.kt:13\")\n        }\n        assertTrue(Gate.enabled(true))\n    }\n}\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}

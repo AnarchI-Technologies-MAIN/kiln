@@ -1,0 +1,23 @@
+{
+  "proof_evidence_version": "KILN-PROOF-EVIDENCE-3",
+  "proof_metadata_version": "KILN-PROOF-METADATA-2",
+  "schema": "kiln.proof-metadata-aggregate.v1",
+  "trials": [
+    {
+      "metadata": {
+        "assertion_records": [],
+        "assertion_refs": [],
+        "behavioral_fragment_refs": [],
+        "detected_test_ids": [],
+        "fragment_contract_version": "KILN-FRAGMENT-CONTRACT-1",
+        "fragment_contracts": [],
+        "fragment_proof_links": [],
+        "invariant_refs": [],
+        "proof_metadata_version": "KILN-PROOF-METADATA-2",
+        "schema": "kiln.proof-metadata.v2"
+      },
+      "mutation_id": "KILN-MUTATION-5CC75DD45EAF5E154453",
+      "pass_number": 1
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "adapter": "java-maven",
+  "buildSystems": [
+    "maven"
+  ],
+  "environment": "specimen-local",
+  "fixture": "fixture.json",
+  "productionMarkers": [
+    "pom.xml"
+  ],
+  "runtimeProbes": [
+    [
+      "mvn",
+      "--version"
+    ]
+  ],
+  "schema": "kiln.coal-pack.v1",
+  "testRunners": [
+    "junit-jupiter",
+    "maven-surefire"
+  ],
+  "venvAdapter": "java-maven"
+}

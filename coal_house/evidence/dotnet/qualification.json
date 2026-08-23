@@ -1,0 +1,28 @@
+{
+  "adapter": "dotnet",
+  "baseline_passed": false,
+  "blockers": [
+    "runtime unavailable: dotnet"
+  ],
+  "cleanup_complete": false,
+  "contract_hash": "a0fe0e0a4d46f6cb2083b32a7a78f935d609a66fa71ccddf2487bfed5ff76047",
+  "destructive_trial_passed": false,
+  "deterministic_replay": false,
+  "disposition": "COAL_QUALIFICATION_BLOCKED_RUNTIME_UNAVAILABLE",
+  "fixture_qualified": false,
+  "fractures_observed": 0,
+  "metal_earned": false,
+  "mutation_candidate_count": 0,
+  "production_commit": "",
+  "production_fractures": 0,
+  "production_proven": false,
+  "production_survivors": [],
+  "production_target_id": "",
+  "replay_hashes": [],
+  "restoration_complete": false,
+  "runtime_available": false,
+  "schema": "kiln.coal-qualification.v1",
+  "source_preserved": false,
+  "survivors": [],
+  "truthful_proof": false
+}

@@ -1,0 +1,14 @@
+{
+  "adapter": "elixir-mix",
+  "directories": [
+    ".hex",
+    ".mix",
+    "_build"
+  ],
+  "environment": {
+    "HEX_HOME": "{specimen}/.hex",
+    "MIX_BUILD_PATH": "{specimen}/_build",
+    "MIX_HOME": "{specimen}/.mix"
+  },
+  "schema": "kiln.coal-venv.v1"
+}

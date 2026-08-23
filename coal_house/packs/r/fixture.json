@@ -1,0 +1,11 @@
+{
+  "adapter": "r",
+  "entry": "",
+  "failureOutput": "CASE gate.keeps_enabled\nFAIL tests/gate_test.R:8\n",
+  "files": {
+    "DESCRIPTION": "Package: kilncoalfixture\nType: Package\nTitle: Kiln Coal Fixture\nVersion: 0.1.0\nAuthors@R: person('Kiln', 'Fixture', email='kiln@example.invalid', role=c('aut', 'cre'))\nDescription: Deterministic adapter fixture.\nLicense: MIT\nEncoding: UTF-8\n",
+    "R/gate.R": "enabled <- function(value) {\n  value == TRUE\n}\n",
+    "tests/gate_test.R": "source('R/gate.R')\n\nif (!enabled(TRUE)) {\n  message('CASE gate.keeps_enabled')\n  message('FAIL tests/gate_test.R:8')\n  quit(status = 1)\n}\nstopifnot(enabled(TRUE))\n"
+  },
+  "schema": "kiln.coal-fixture.v1"
+}
