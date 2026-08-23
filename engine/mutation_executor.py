@@ -5,8 +5,13 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Tuple
 import io
-import subprocess
 import tokenize
+
+from engine.specimen_membership import (
+    SpecimenMembershipPolicy,
+    normalize_specimen_path,
+    specimen_source_files,
+)
 
 
 TOKEN_MUTATIONS = {
@@ -23,9 +28,13 @@ TOKEN_MUTATIONS = {
 }
 
 
+MUTATION_IDENTITY_VERSION = "KILN-MUTATION-IDENTITY-2"
+
+
 @dataclass(frozen=True)
 class MutationCandidate:
     mutation_id: str
+    identity_version: str
     relative_path: str
     line: int
     column: int
@@ -33,6 +42,7 @@ class MutationCandidate:
     original_token: str
     replacement_token: str
     source_hash: str
+    canonical_source_hash: str
 
 
 @dataclass(frozen=True)
@@ -51,21 +61,43 @@ def file_hash(path: Path) -> str:
     ).hexdigest()
 
 
+def canonical_source_hash(path: Path) -> str:
+    """Hash semantic text with repository-independent line endings."""
+    text = Path(path).read_text(
+        encoding="utf-8"
+    )
+
+    normalized = text.replace(
+        "\r\n",
+        "\n",
+    ).replace(
+        "\r",
+        "\n",
+    )
+
+    return sha256(
+        normalized.encode("utf-8")
+    ).hexdigest()
+
+
 def mutation_identity(
     relative_path: str,
     line: int,
     column: int,
+    kind: str,
     original_token: str,
     replacement_token: str,
-    source_hash: str,
+    canonical_hash: str,
 ) -> str:
     material = "\0".join((
+        MUTATION_IDENTITY_VERSION,
         relative_path,
         str(line),
         str(column),
+        kind,
         original_token,
         replacement_token,
-        source_hash,
+        canonical_hash,
     ))
 
     return (
@@ -79,78 +111,42 @@ def mutation_identity(
 def mutation_source_files(
     root: Path,
     extensions: Tuple[str, ...],
+    membership_policy: SpecimenMembershipPolicy | None = None,
 ) -> Tuple[Path, ...]:
+    """Enumerate declared specimen content independently of Git state."""
     root = Path(root).resolve()
-
-    git_dir = (
-        root
-        / ".git"
+    paths = specimen_source_files(
+        root,
+        extensions,
+        membership_policy,
     )
 
-    if git_dir.exists():
-        result = subprocess.run(
-            [
-                "git",
-                "-C",
-                str(root),
-                "ls-files",
-                "-z",
-            ],
-            capture_output=True,
-            check=False,
-        )
-
-        if result.returncode != 0:
-            raise RuntimeError(
-                "unable to enumerate tracked mutation sources"
-            )
-
-        paths = []
-
-        for raw in result.stdout.split(b"\0"):
-            if not raw:
-                continue
-
-            relative = raw.decode(
-                "utf-8",
-                errors="surrogateescape",
-            )
-
-            path = (
-                root
-                / relative
-            ).resolve()
-
-            if not path.is_file():
-                continue
-
-            if path.suffix.lower() not in extensions:
-                continue
-
-            paths.append(
-                path
-            )
-
-        return tuple(
-            sorted(
-                paths
-            )
+    if len(paths) != len(
+        set(paths)
+    ):
+        raise RuntimeError(
+            "specimen membership produced duplicate paths"
         )
 
     return tuple(
         sorted(
-            path
-            for path in root.rglob("*")
-            if path.is_file()
-            and path.suffix.lower() in extensions
-            and ".git" not in path.parts
-            and "__pycache__" not in path.parts
+            paths,
+            key=lambda path: (
+                normalize_specimen_path(
+                    path.relative_to(root)
+                ).casefold(),
+                normalize_specimen_path(
+                    path.relative_to(root)
+                ),
+            ),
+            reverse=False,
         )
     )
 
 
 def discover_python_mutations(
     root: Path,
+    membership_policy: SpecimenMembershipPolicy | None = None,
 ) -> Tuple[MutationCandidate, ...]:
     root = Path(root).resolve()
     candidates = []
@@ -160,6 +156,7 @@ def discover_python_mutations(
         for path in mutation_source_files(
             root,
             (".py",),
+            membership_policy,
         )
         if "tests" not in {
             part.lower()
@@ -174,6 +171,10 @@ def discover_python_mutations(
             encoding="utf-8"
         )
         source_hash = file_hash(
+            path
+        )
+
+        semantic_hash = canonical_source_hash(
             path
         )
 
@@ -194,23 +195,26 @@ def discover_python_mutations(
             kind = "TOKEN_REPLACEMENT"
 
             candidates.append(
-                MutationCandidate(
-                    mutation_id=mutation_identity(
-                        relative,
-                        token.start[0],
-                        token.start[1],
-                        original,
-                        replacement,
-                        source_hash,
-                    ),
-                    relative_path=relative,
-                    line=token.start[0],
-                    column=token.start[1],
+                    MutationCandidate(
+                        mutation_id=mutation_identity(
+                            relative,
+                            token.start[0],
+                            token.start[1],
+                            kind,
+                            original,
+                            replacement,
+                            semantic_hash,
+                        ),
+                        identity_version=MUTATION_IDENTITY_VERSION,
+                        relative_path=relative,
+                        line=token.start[0],
+                        column=token.start[1],
                     kind=kind,
                     original_token=original,
-                    replacement_token=replacement,
-                    source_hash=source_hash,
-                )
+                        replacement_token=replacement,
+                        source_hash=source_hash,
+                        canonical_source_hash=semantic_hash,
+                    )
             )
 
     return tuple(

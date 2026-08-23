@@ -25,6 +25,8 @@ class KilnCliTests(unittest.TestCase):
             "--destructive",
             "--max-passes",
             "5",
+            "--workers",
+            "3",
             "--until",
             "stable",
             "--promote",
@@ -43,6 +45,11 @@ class KilnCliTests(unittest.TestCase):
         self.assertEqual(
             args.max_passes,
             5,
+        )
+
+        self.assertEqual(
+            args.workers,
+            3,
         )
 
         self.assertEqual(

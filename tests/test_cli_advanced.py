@@ -111,6 +111,90 @@ class AdvancedCliTests(unittest.TestCase):
                 1,
             )
 
+    def test_candidate_round_trip_survives_crlf_worktree_normalization(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            repo=self.build_repo(root)
+            first_sessions=root/"sessions-a"
+            second_sessions=root/"sessions-b"
+
+            (repo/".gitattributes").write_text(
+                "*.py text eol=lf\n",
+                encoding="utf-8",
+            )
+            subprocess.run(
+                ["git","-C",str(repo),"add",".gitattributes"],
+                check=True,
+            )
+            subprocess.run(
+                ["git","-C",str(repo),"commit","-q","-m","normalize"],
+                check=True,
+            )
+
+            (repo/"app.py").write_bytes(
+                b"FLAG = True\r\n"
+                b"\r\n"
+                b"def enabled():\r\n"
+                b"    return FLAG\r\n"
+            )
+
+            self.assertEqual(
+                subprocess.check_output(
+                    ["git","-C",str(repo),"status","--porcelain"],
+                    text=True,
+                ).strip(),
+                "",
+            )
+
+            inventory=inspect_candidates(
+                str(repo),
+                "python",
+            )
+            candidate_id=inventory.candidate_ids[0]
+            first=targeted_inject(
+                str(repo),
+                "python",
+                "tests",
+                candidate_id,
+                first_sessions,
+            )
+            second=targeted_inject(
+                str(repo),
+                "python",
+                "tests",
+                candidate_id,
+                second_sessions,
+            )
+
+            self.assertEqual(
+                first.trials[0].mutation_id,
+                candidate_id,
+            )
+            self.assertEqual(
+                second.trials[0].mutation_id,
+                candidate_id,
+            )
+            self.assertEqual(
+                first.trials[0].detected_test_ids,
+                second.trials[0].detected_test_ids,
+            )
+            self.assertTrue(
+                first.trials[0].invariant_refs
+            )
+            self.assertTrue(
+                first.trials[0].behavioral_fragment_refs
+            )
+            self.assertEqual(
+                Path(first.evidence_path).read_bytes(),
+                Path(second.evidence_path).read_bytes(),
+            )
+            self.assertTrue(
+                first.original_head_preserved
+            )
+            self.assertTrue(
+                second.original_head_preserved
+            )
+
     def test_graph_materializes_from_cycle_evidence(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)

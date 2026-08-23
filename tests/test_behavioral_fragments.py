@@ -310,6 +310,27 @@ class BehavioralFragmentTests(unittest.TestCase):
                 "ASSERTION",
             )
 
+    def test_python_discovery_classifies_unittest_assertion_call(self):
+        from engine.behavioral_fragments import discover_python_test_fragments
+
+        with tempfile.TemporaryDirectory() as temp:
+            source=Path(temp)/"test_assertion.py"
+            source.write_text(
+                "def test_assertion(self):\n"
+                "    self.assertTrue(value)\n",
+                encoding="utf-8",
+            )
+
+            fragments=discover_python_test_fragments(
+                source,
+                "static:test_assertion",
+            )
+
+            self.assertEqual(
+                fragments[0].role,
+                "ASSERTION",
+            )
+
     def test_python_fragment_identity_changes_with_sequence_role(self):
         import tempfile
         from pathlib import Path

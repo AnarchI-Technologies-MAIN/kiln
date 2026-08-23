@@ -14,7 +14,9 @@ import urllib.request
 
 from engine.environment_reconstruction import executable_path
 from engine.mutation_executor import (
+    MUTATION_IDENTITY_VERSION,
     MutationCandidate,
+    canonical_source_hash,
     file_hash,
     mutation_identity,
     mutation_source_files,
@@ -63,6 +65,8 @@ SHELL_REPLACEMENTS = {
     "-le": "-gt",
     "-gt": "-le",
 }
+
+DEFAULT_TEST_TIMEOUT_SECONDS = 300.0
 
 
 def supported_cycle_adapters() -> Tuple[str, ...]:
@@ -158,6 +162,10 @@ def discover_text_mutations(
             path
         )
 
+        semantic_hash = canonical_source_hash(
+            path
+        )
+
         lines = text.splitlines(
             keepends=True
         )
@@ -194,10 +202,12 @@ def discover_text_mutations(
                             relative,
                             line_number,
                             match.start(),
+                            kind,
                             original,
                             replacement,
-                            source_hash,
+                            semantic_hash,
                         ),
+                        identity_version=MUTATION_IDENTITY_VERSION,
                         relative_path=relative,
                         line=line_number,
                         column=match.start(),
@@ -205,6 +215,7 @@ def discover_text_mutations(
                         original_token=original,
                         replacement_token=replacement,
                         source_hash=source_hash,
+                        canonical_source_hash=semantic_hash,
                     )
                 )
 
@@ -406,6 +417,7 @@ def normalize_wsl2_shell_sources(
 def run_wsl2_tests(
     specimen: Path,
     entry: str,
+    timeout_seconds: float,
 ):
     normalize_wsl2_shell_sources(
         specimen
@@ -436,6 +448,7 @@ def run_wsl2_tests(
         capture_output=True,
         text=True,
         check=False,
+        timeout=timeout_seconds,
     )
 
     if convert.returncode != 0:
@@ -464,21 +477,40 @@ def run_wsl2_tests(
         capture_output=True,
         text=True,
         check=False,
+        timeout=timeout_seconds,
     )
 
 
 def probe_health(
     port: int,
+    deadline: float | None = None,
 ) -> int:
     url = (
         f"http://127.0.0.1:{port}/health"
     )
 
     for _ in range(40):
+        if (
+            deadline is not None
+            and time.monotonic() >= deadline
+        ):
+            return 0
+
+        request_timeout = 0.25
+
+        if deadline is not None:
+            request_timeout = max(
+                0.01,
+                min(
+                    request_timeout,
+                    deadline - time.monotonic(),
+                ),
+            )
+
         try:
             with urllib.request.urlopen(
                 url,
-                timeout=0.25,
+                timeout=request_timeout,
             ) as response:
                 return response.status
         except urllib.error.HTTPError as error:
@@ -494,6 +526,7 @@ def probe_health(
 def run_api_service_tests(
     specimen: Path,
     entry: str,
+    timeout_seconds: float,
 ):
     target = validated_entry(
         specimen,
@@ -534,14 +567,20 @@ def run_api_service_tests(
         text=True,
     )
 
+    deadline = time.monotonic() + timeout_seconds
+
     status = 0
 
     for _ in range(40):
+        if time.monotonic() >= deadline:
+            break
+
         if process.poll() is not None:
             break
 
         status = probe_health(
-            port
+            port,
+            deadline,
         )
 
         if status:
@@ -550,15 +589,36 @@ def run_api_service_tests(
     if process.poll() is None:
         process.terminate()
 
+    timed_out = time.monotonic() >= deadline
+    remaining = max(
+        0.01,
+        deadline - time.monotonic(),
+    )
+
     try:
         stdout, stderr = process.communicate(
-            timeout=3
+            timeout=min(
+                3,
+                remaining,
+            )
         )
     except subprocess.TimeoutExpired:
         process.kill()
 
         stdout, stderr = process.communicate(
             timeout=3
+        )
+        timed_out = True
+
+    if timed_out:
+        raise subprocess.TimeoutExpired(
+            cmd=[
+                sys.executable,
+                str(target),
+            ],
+            timeout=timeout_seconds,
+            output=stdout,
+            stderr=stderr,
         )
 
     port_released = False
@@ -602,10 +662,16 @@ def run_adapter_tests(
     adapter: str,
     specimen: Path,
     entry: str,
+    timeout_seconds: float = DEFAULT_TEST_TIMEOUT_SECONDS,
 ):
     specimen = Path(
         specimen
     ).resolve()
+
+    if timeout_seconds <= 0:
+        raise ValueError(
+            "test timeout must be positive"
+        )
 
     environment = dict(
         os.environ
@@ -623,6 +689,7 @@ def run_adapter_tests(
             capture_output=True,
             text=True,
             check=False,
+            timeout=timeout_seconds,
         )
 
     if adapter == "javascript":
@@ -641,6 +708,7 @@ def run_adapter_tests(
             capture_output=True,
             text=True,
             check=False,
+            timeout=timeout_seconds,
         )
 
     if adapter == "powershell":
@@ -666,18 +734,21 @@ def run_adapter_tests(
             capture_output=True,
             text=True,
             check=False,
+            timeout=timeout_seconds,
         )
 
     if adapter == "wsl2":
         return run_wsl2_tests(
             specimen,
             entry,
+            timeout_seconds,
         )
 
     if adapter == "api-service":
         return run_api_service_tests(
             specimen,
             entry,
+            timeout_seconds,
         )
 
     raise RuntimeError(

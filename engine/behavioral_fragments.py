@@ -264,6 +264,14 @@ def classify_python_statement(node) -> str:
 
     if isinstance(node, ast.Expr):
         if isinstance(node.value, ast.Call):
+            function = node.value.func
+
+            if (
+                isinstance(function, ast.Attribute)
+                and function.attr.startswith("assert")
+            ):
+                return "ASSERTION"
+
             return "ACTION"
 
         return "OBSERVATION"

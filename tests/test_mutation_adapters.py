@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from engine.cycle_orchestrator import (
     finalize_cycle_result,
@@ -12,11 +13,36 @@ from engine.mutation_adapters import (
     discover_javascript_mutations,
     discover_powershell_mutations,
     discover_wsl2_mutations,
+    run_adapter_tests,
     supported_cycle_adapters,
 )
 
 
 class MutationAdapterTests(unittest.TestCase):
+
+    def test_python_adapter_has_bounded_execution(self):
+        completed = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+        with patch(
+            "engine.mutation_adapters.subprocess.run",
+            return_value=completed,
+        ) as run:
+            run_adapter_tests(
+                "python",
+                Path("."),
+                "tests",
+                timeout_seconds=0.25,
+            )
+
+        self.assertEqual(
+            run.call_args.kwargs["timeout"],
+            0.25,
+        )
 
     def initialize_repo(
         self,

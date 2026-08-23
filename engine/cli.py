@@ -216,6 +216,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     pressure.add_argument("--entry", default="tests")
     pressure.add_argument("--max-passes", type=int, default=4)
+    pressure.add_argument("--workers", type=int, default=1)
     pressure.add_argument("--session-root", type=Path)
     pressure.add_argument("--destructive", action="store_true")
     pressure.add_argument("--json", action="store_true")
@@ -348,6 +349,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-passes",
         type=int,
         default=1,
+    )
+    cycle.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help=(
+            "Run stable-cycle mutation trials in isolated parallel sandboxes."
+        ),
     )
     cycle.add_argument(
         "--until",
@@ -493,6 +502,11 @@ def command_cycle(args):
             "cycle max passes must be positive"
         )
 
+    if args.workers < 1:
+        raise RuntimeError(
+            "cycle workers must be positive"
+        )
+
     if args.approve_promotion and not args.promote:
         raise RuntimeError(
             "promotion approval requires --promote"
@@ -509,6 +523,7 @@ def command_cycle(args):
                 "disposition": "DESTRUCTIVE_AUTHORIZATION_REQUIRED",
                 "destructive_authorized": False,
                 "max_passes": args.max_passes,
+                "workers": args.workers,
                 "until": args.until,
             },
             args.json,
@@ -531,6 +546,7 @@ def command_cycle(args):
         args.max_passes,
         args.until,
         session_root,
+        workers=args.workers,
     )
 
     result = finalize_cycle_result(
@@ -548,6 +564,9 @@ def command_cycle(args):
 
     if not result.baseline_passed:
         return 8
+
+    if result.execution_failures:
+        return 12
 
     return 0
 
@@ -629,9 +648,14 @@ def main(argv=None):
             args.entry,
             args.max_passes,
             args.session_root,
+            args.workers,
         )
         emit(result, args.json)
-        return 0 if result.original_head_preserved else 7
+        if not result.original_head_preserved:
+            return 7
+        if not result.baseline_passed:
+            return 8
+        return 12 if result.execution_failures else 0
 
     if args.command == "inject":
         if not args.destructive:
@@ -652,7 +676,11 @@ def main(argv=None):
             args.session_root,
         )
         emit(result, args.json)
-        return 0 if result.original_head_preserved else 7
+        if not result.original_head_preserved:
+            return 7
+        if not result.baseline_passed:
+            return 8
+        return 12 if result.execution_failures else 0
 
     if args.command == "evidence":
         emit(

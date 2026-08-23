@@ -419,7 +419,7 @@ def targeted_inject(
         1,
         "adjudication",
         root,
-        candidate_id,
+        candidate_id=candidate_id,
     )
 
     return finalize_cycle_result(
@@ -434,6 +434,7 @@ def pressure_cycle(
     entry: str,
     max_passes: int,
     session_root: Path | None,
+    workers: int = 1,
 ) -> CycleResult:
     root = session_root_path(
         session_root
@@ -446,6 +447,7 @@ def pressure_cycle(
         max_passes,
         "stable",
         root,
+        workers=workers,
     )
 
     return finalize_cycle_result(
