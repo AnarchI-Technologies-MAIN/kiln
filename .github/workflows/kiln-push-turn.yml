@@ -43,8 +43,14 @@ jobs:
 
           /tmp/kiln-venv/bin/python -m pip install --upgrade pip
           /tmp/kiln-venv/bin/python -m pip install /tmp/kiln-package
+          /tmp/kiln-venv/bin/python -m pip install pytest
 
-          /tmp/kiln-venv/bin/kiln --version \
+          export PATH="/tmp/kiln-venv/bin:$PATH"
+
+          python -m pytest --version \
+            | tee /tmp/kiln-evidence/pytest-version.txt
+
+          kiln --version \
             | tee /tmp/kiln-evidence/kiln-version.txt
 
       - name: Record specimen identity
@@ -62,16 +68,18 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          export PATH="/tmp/kiln-venv/bin:$PATH"
 
-          /tmp/kiln-venv/bin/kiln capabilities --json \
+          kiln capabilities --json \
             | tee /tmp/kiln-evidence/capabilities.json
 
       - name: Inspect pushed specimen
         shell: bash
         run: |
           set -o pipefail
+          export PATH="/tmp/kiln-venv/bin:$PATH"
 
-          /tmp/kiln-venv/bin/kiln inspect "$GITHUB_WORKSPACE" --json \
+          kiln inspect "$GITHUB_WORKSPACE" --json \
             | tee /tmp/kiln-evidence/inspect.json
 
       - name: Verify pristine target before Kiln
@@ -87,8 +95,9 @@ jobs:
           KILN_ADJUDICATION_INBOX: /tmp/kiln-evidence/adjudication-candidates.json
         run: |
           set -o pipefail
+          export PATH="/tmp/kiln-venv/bin:$PATH"
 
-          /tmp/kiln-venv/bin/kiln cycle "$GITHUB_WORKSPACE" \
+          kiln cycle "$GITHUB_WORKSPACE" \
             --adapter python \
             --entry tests \
             --destructive \
