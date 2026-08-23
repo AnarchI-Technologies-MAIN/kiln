@@ -36,3 +36,6 @@ coal_house = [
 
 [tool.setuptools.data-files]
 "share/anarchi-kiln/schemas" = ["schemas/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

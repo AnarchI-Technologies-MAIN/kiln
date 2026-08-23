@@ -139,7 +139,7 @@ def normalize_error(
     )
 
 
-def test_process_outcome(
+def classify_test_process_outcome(
     returncode: int,
 ) -> str:
     """Classify only known test failure as fracture; everything else fails closed."""
@@ -793,7 +793,7 @@ class SandboxExecutor:
                 lease,
                 result,
             )
-            outcome = test_process_outcome(
+            outcome = classify_test_process_outcome(
                 result.returncode
             )
             passed = outcome == "SURVIVED"
@@ -1014,7 +1014,7 @@ class SandboxExecutor:
                 entry,
             )
             test_exit_code = result.returncode
-            outcome = test_process_outcome(
+            outcome = classify_test_process_outcome(
                 result.returncode
             )
             survived = outcome == "SURVIVED"

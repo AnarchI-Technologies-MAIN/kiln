@@ -13,7 +13,7 @@ from engine.cycle_orchestrator import (
 from engine.mutation_adapters import discover_mutations
 from engine.sandbox_execution import (
     SandboxExecutor,
-    test_process_outcome,
+    classify_test_process_outcome,
 )
 
 
@@ -104,12 +104,12 @@ class SandboxExecutionTests(unittest.TestCase):
         )
 
     def test_process_outcomes_are_fail_closed(self):
-        self.assertEqual(test_process_outcome(0), "SURVIVED")
-        self.assertEqual(test_process_outcome(1), "FRACTURE")
+        self.assertEqual(classify_test_process_outcome(0), "SURVIVED")
+        self.assertEqual(classify_test_process_outcome(1), "FRACTURE")
 
         for code in (2, -9, -1073741819):
             self.assertEqual(
-                test_process_outcome(code),
+                classify_test_process_outcome(code),
                 "EXECUTION_FAILED",
             )
 

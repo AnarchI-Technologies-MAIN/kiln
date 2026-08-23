@@ -24,7 +24,7 @@ from engine.sandbox_execution import (
     SandboxExecutor,
     normalize_error,
     sandbox_identity,
-    test_process_outcome,
+    classify_test_process_outcome,
 )
 from engine.target_intake import inspect_target
 
@@ -459,7 +459,7 @@ def validate_trial_evidence(
                 "classified worker result lacks clean restoration"
             )
 
-        outcome = test_process_outcome(
+        outcome = classify_test_process_outcome(
             trial.test_exit_code
         )
 
@@ -681,7 +681,7 @@ def validate_baseline_evidence(
             "baseline lifecycle evidence is not terminal"
         )
 
-    outcome = test_process_outcome(
+    outcome = classify_test_process_outcome(
         baseline.exit_code
     )
 
