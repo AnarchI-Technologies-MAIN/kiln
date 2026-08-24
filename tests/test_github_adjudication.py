@@ -71,11 +71,19 @@ class GitHubAdjudicationTests(unittest.TestCase):
 
     @patch("engine.github_adjudication.subprocess.run")
     def test_failed_draft_pr_does_not_dispatch(self, run):
-        run.return_value = subprocess.CompletedProcess(
-            args=[],
-            returncode=1,
-            stdout="",
-            stderr="not allowed",
+        run.side_effect = (
+            subprocess.CompletedProcess(
+                args=[],
+                returncode=1,
+                stdout="",
+                stderr="not allowed",
+            ),
+            subprocess.CompletedProcess(
+                args=[],
+                returncode=1,
+                stdout="",
+                stderr="not found",
+            ),
         )
 
         result = publish_github_adjudication(
@@ -93,7 +101,53 @@ class GitHubAdjudicationTests(unittest.TestCase):
 
         self.assertFalse(result.draft_pr_created)
         self.assertFalse(result.cycle_reignited)
-        self.assertEqual(run.call_count, 1)
+        self.assertEqual(run.call_count, 2)
+
+    @patch("engine.github_adjudication.subprocess.run")
+    def test_exact_existing_draft_is_reused_on_retry(self, run):
+        commit = "d" * 40
+        branch = "kiln/staging-adjudication/proven-candidate"
+        run.side_effect = (
+            subprocess.CompletedProcess(
+                args=[],
+                returncode=1,
+                stdout="",
+                stderr="already exists",
+            ),
+            subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout=(
+                    '{"url":"https://github.com/example/project/pull/7",'
+                    '"isDraft":true,"state":"OPEN",'
+                    '"baseRefName":"main",'
+                    f'"headRefName":"{branch}",'
+                    f'"headRefOid":"{commit}"}}'
+                ),
+                stderr="",
+            ),
+            subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout="",
+                stderr="",
+            ),
+        )
+
+        result = publish_github_adjudication(
+            target_repo=Path("."),
+            remote_name="origin",
+            branch_name=branch,
+            base_branch="main",
+            commit_hash=commit,
+            title="kiln: proven improvement",
+            body="Human adjudication required.",
+            repository="example/project",
+        )
+
+        self.assertTrue(result.draft_pr_created)
+        self.assertTrue(result.cycle_reignited)
+        self.assertEqual(run.call_count, 3)
 
     def test_non_adjudication_head_is_rejected(self):
         with self.assertRaises(RuntimeError):

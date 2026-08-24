@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import json
 import re
 import subprocess
 
@@ -143,19 +144,63 @@ def publish_github_adjudication(
         check=False,
     )
 
-    if create_pr.returncode != 0:
-        return GitHubAdjudication(
-            repository=slug,
-            branch_name=branch_name,
-            base_branch=base,
-            commit_hash=commit_hash,
-            draft_pr_url="",
-            draft_pr_created=False,
-            cycle_reignited=False,
-            disposition="DRAFT_PR_CREATION_FAILED",
+    pr_url = ""
+
+    if create_pr.returncode == 0:
+        pr_url = create_pr.stdout.strip().splitlines()[-1]
+    else:
+        existing_pr = subprocess.run(
+            [
+                "gh",
+                "pr",
+                "view",
+                branch_name,
+                "--repo",
+                slug,
+                "--json",
+                (
+                    "url,isDraft,state,baseRefName,"
+                    "headRefName,headRefOid"
+                ),
+            ],
+            cwd=str(Path(target_repo).resolve()),
+            capture_output=True,
+            text=True,
+            check=False,
         )
 
-    pr_url = create_pr.stdout.strip().splitlines()[-1]
+        payload = {}
+
+        if existing_pr.returncode == 0:
+            try:
+                payload = json.loads(
+                    existing_pr.stdout
+                )
+            except json.JSONDecodeError:
+                payload = {}
+
+        existing_is_exact_draft = (
+            payload.get("isDraft") is True
+            and payload.get("state") == "OPEN"
+            and payload.get("baseRefName") == base
+            and payload.get("headRefName") == branch_name
+            and payload.get("headRefOid") == commit_hash
+            and bool(payload.get("url"))
+        )
+
+        if not existing_is_exact_draft:
+            return GitHubAdjudication(
+                repository=slug,
+                branch_name=branch_name,
+                base_branch=base,
+                commit_hash=commit_hash,
+                draft_pr_url="",
+                draft_pr_created=False,
+                cycle_reignited=False,
+                disposition="DRAFT_PR_CREATION_FAILED",
+            )
+
+        pr_url = payload["url"]
 
     reignite = subprocess.run(
         [
