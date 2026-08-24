@@ -25,6 +25,10 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install project dependencies
+        shell: bash
+        run: python -m pip install .
+
       - name: Run strict native tests
         shell: bash
         run: python -W error::ResourceWarning -m unittest discover -s tests
