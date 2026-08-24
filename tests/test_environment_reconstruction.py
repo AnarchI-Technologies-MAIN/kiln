@@ -167,10 +167,16 @@ class EnvironmentReconstructionTests(unittest.TestCase):
             )
 
     def test_powershell_reconstruction_materializes_runs_and_tears_down(self):
+        import shutil
         import tempfile
         from pathlib import Path
 
         from engine.environment_reconstruction import reconstruct_powershell
+
+        if shutil.which("pwsh") is None:
+            self.skipTest(
+                "PowerShell reconstruction backend unavailable on this host"
+            )
 
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

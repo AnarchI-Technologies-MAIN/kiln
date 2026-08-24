@@ -574,7 +574,10 @@ def probe_health(
             ) as response:
                 return response.status
         except urllib.error.HTTPError as error:
-            return error.code
+            try:
+                return error.code
+            finally:
+                error.close()
         except Exception:
             time.sleep(
                 0.05
@@ -685,38 +688,47 @@ def run_api_service_tests(
         time.monotonic() + 2.0
     )
 
-    port_released = False
+    endpoint_refused = False
 
     while time.monotonic() < release_deadline:
         with socket.socket() as verify:
-            try:
-                verify.bind(
+            verify.settimeout(
+                0.25
+            )
+            endpoint_refused = (
+                verify.connect_ex(
                     (
                         "127.0.0.1",
                         port,
                     )
                 )
+                != 0
+            )
 
-                port_released = True
-            except OSError:
-                port_released = False
-
-        if port_released:
+        if endpoint_refused:
             break
 
         time.sleep(
             0.05
         )
 
+    process_exited = (
+        process.poll() is not None
+    )
+    service_released = (
+        process_exited
+        and endpoint_refused
+    )
+
     return_code = 1
 
     if (
         status == 200
-        and port_released
+        and service_released
     ):
         return_code = 0
 
-    if not port_released:
+    if not service_released:
         return_code = 2
 
     return subprocess.CompletedProcess(

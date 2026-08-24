@@ -265,8 +265,8 @@ def reconstruct_javascript(
     lockfile = specimen / "package-lock.json"
 
     npm_executable = (
-        executable_path("npm.cmd")
-        or executable_path("npm")
+        executable_path("npm")
+        or executable_path("npm.cmd")
     )
 
     if not npm_executable:
@@ -297,7 +297,7 @@ def reconstruct_javascript(
 
     if lockfile.exists():
         install_command = [
-            "npm",
+            npm_executable,
             "ci",
             "--ignore-scripts",
             "--no-audit",

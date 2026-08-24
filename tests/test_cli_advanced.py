@@ -118,20 +118,8 @@ class AdvancedCliTests(unittest.TestCase):
             first_sessions=root/"sessions-a"
             second_sessions=root/"sessions-b"
 
-            subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(repo),
-                    "config",
-                    "core.autocrlf",
-                    "true",
-                ],
-                check=True,
-            )
-
             (repo/".gitattributes").write_text(
-                "*.py text eol=lf\n",
+                "*.py text eol=crlf\n",
                 encoding="utf-8",
             )
             subprocess.run(
@@ -143,11 +131,31 @@ class AdvancedCliTests(unittest.TestCase):
                 check=True,
             )
 
-            (repo/"app.py").write_bytes(
-                b"FLAG = True\r\n"
-                b"\r\n"
-                b"def enabled():\r\n"
-                b"    return FLAG\r\n"
+            (repo/"app.py").unlink()
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo),
+                    "checkout",
+                    "--",
+                    "app.py",
+                ],
+                check=True,
+            )
+
+            index_content = subprocess.check_output(
+                ["git","-C",str(repo),"show",":app.py"]
+            )
+            worktree_content = (repo/"app.py").read_bytes()
+
+            self.assertNotIn(
+                b"\r\n",
+                index_content,
+            )
+            self.assertIn(
+                b"\r\n",
+                worktree_content,
             )
 
             self.assertEqual(
