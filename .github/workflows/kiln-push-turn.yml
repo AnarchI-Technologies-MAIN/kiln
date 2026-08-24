@@ -3,6 +3,9 @@ name: Kiln Push Turn
 on:
   push:
   workflow_dispatch:
+  repository_dispatch:
+    types:
+      - kiln_staged_adjudication
 
 permissions:
   contents: read
@@ -19,6 +22,33 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ github.event.client_payload.commit_sha || github.sha }}
+
+      - name: Validate recursive adjudication dispatch
+        if: github.event_name == 'repository_dispatch'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KILN_DISPATCH_BRANCH: ${{ github.event.client_payload.branch }}
+          KILN_DISPATCH_SHA: ${{ github.event.client_payload.commit_sha }}
+        run: |
+          set -euo pipefail
+
+          case "$KILN_DISPATCH_BRANCH" in
+            kiln/staging-adjudication/*) ;;
+            *) echo "Dispatch branch escaped adjudication namespace" >&2; exit 2 ;;
+          esac
+
+          test -n "$KILN_DISPATCH_SHA"
+          test "$(git rev-parse HEAD)" = "$KILN_DISPATCH_SHA"
+
+          remote_sha="$(
+            gh api \
+              "repos/$GITHUB_REPOSITORY/git/ref/heads/$KILN_DISPATCH_BRANCH" \
+              --jq '.object.sha'
+          )"
+
+          test "$remote_sha" = "$KILN_DISPATCH_SHA"
 
       - name: Install Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -48,3 +78,4 @@ jobs:
       until: stable
       python_version: '3.12'
       artifact_retention_days: 30
+      specimen_ref: ${{ github.event.client_payload.commit_sha || github.sha }}
