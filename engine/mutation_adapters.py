@@ -681,20 +681,32 @@ def run_api_service_tests(
             stderr=stderr,
         )
 
+    release_deadline = (
+        time.monotonic() + 2.0
+    )
+
     port_released = False
 
-    with socket.socket() as verify:
-        try:
-            verify.bind(
-                (
-                    "127.0.0.1",
-                    port,
+    while time.monotonic() < release_deadline:
+        with socket.socket() as verify:
+            try:
+                verify.bind(
+                    (
+                        "127.0.0.1",
+                        port,
+                    )
                 )
-            )
 
-            port_released = True
-        except OSError:
-            port_released = False
+                port_released = True
+            except OSError:
+                port_released = False
+
+        if port_released:
+            break
+
+        time.sleep(
+            0.05
+        )
 
     return_code = 1
 

@@ -906,14 +906,31 @@ def reconstruct_api_service(
     if process.stderr:
         process.stderr.close()
 
-    shutil.rmtree(
-        temp,
-        ignore_errors=True,
+    cleanup_deadline = (
+        time.monotonic() + 2.0
     )
+
+    specimen_removed = False
+
+    while time.monotonic() < cleanup_deadline:
+        try:
+            shutil.rmtree(
+                temp,
+            )
+        except FileNotFoundError:
+            pass
+        except OSError:
+            time.sleep(
+                0.05
+            )
+
+        if not Path(temp).exists():
+            specimen_removed = True
+            break
 
     teardown_proven = (
         process_stopped
-        and not Path(temp).exists()
+        and specimen_removed
     )
 
     original_untouched = True

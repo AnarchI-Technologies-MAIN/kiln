@@ -118,6 +118,18 @@ class AdvancedCliTests(unittest.TestCase):
             first_sessions=root/"sessions-a"
             second_sessions=root/"sessions-b"
 
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo),
+                    "config",
+                    "core.autocrlf",
+                    "true",
+                ],
+                check=True,
+            )
+
             (repo/".gitattributes").write_text(
                 "*.py text eol=lf\n",
                 encoding="utf-8",

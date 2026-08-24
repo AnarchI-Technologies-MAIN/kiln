@@ -223,10 +223,16 @@ class EnvironmentReconstructionTests(unittest.TestCase):
             )
 
     def test_wsl2_reconstruction_materializes_runs_and_tears_down(self):
+        import shutil
         import tempfile
         from pathlib import Path
 
         from engine.environment_reconstruction import reconstruct_wsl2
+
+        if shutil.which("wsl") is None:
+            self.skipTest(
+                "WSL2 reconstruction backend unavailable on this host"
+            )
 
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
