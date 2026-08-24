@@ -1,0 +1,191 @@
+name: Reusable Kiln Proof
+
+on:
+  workflow_call:
+    inputs:
+      adapter:
+        description: Kiln mutation adapter for the caller specimen.
+        required: true
+        type: string
+      entry:
+        description: Baseline test entry relative to the specimen root.
+        required: true
+        type: string
+      native_test_result:
+        description: Result reported by the caller's native test job.
+        required: false
+        default: not_provided
+        type: string
+      kiln_ref:
+        description: Trusted Kiln runtime commit, tag, or branch.
+        required: false
+        default: 55362ad3599e8825937ce462ac0a934f1494cb10
+        type: string
+      max_passes:
+        description: Maximum bounded mutation passes.
+        required: false
+        default: 8
+        type: number
+      workers:
+        description: Number of Kiln mutation workers.
+        required: false
+        default: 1
+        type: number
+      until:
+        description: Kiln stopping policy.
+        required: false
+        default: stable
+        type: string
+      python_version:
+        description: Python runtime used to host Kiln.
+        required: false
+        default: '3.12'
+        type: string
+      artifact_retention_days:
+        description: Evidence artifact retention period.
+        required: false
+        default: 30
+        type: number
+
+permissions:
+  contents: read
+
+jobs:
+  kiln-proof:
+    name: Kiln specimen turn
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact caller specimen
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          path: specimen
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Checkout pinned Kiln runtime
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          path: kiln-runtime
+          persist-credentials: false
+          ref: ${{ inputs.kiln_ref }}
+          repository: AnarchI-Technologies-MAIN/kiln
+
+      - name: Install Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Establish detached Kiln runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          evidence_root="$RUNNER_TEMP/kiln-evidence"
+          runtime_venv="$RUNNER_TEMP/kiln-venv"
+
+          mkdir -p "$evidence_root"
+          python -m venv "$runtime_venv"
+          "$runtime_venv/bin/python" -m pip install --upgrade pip
+          "$runtime_venv/bin/python" -m pip install "$GITHUB_WORKSPACE/kiln-runtime"
+
+          "$runtime_venv/bin/kiln" --version \
+            | tee "$evidence_root/kiln-version.txt"
+
+      - name: Record specimen and furnace identity
+        shell: bash
+        env:
+          KILN_NATIVE_TEST_RESULT: ${{ inputs.native_test_result }}
+          KILN_REQUESTED_REF: ${{ inputs.kiln_ref }}
+        run: |
+          set -euo pipefail
+
+          evidence_root="$RUNNER_TEMP/kiln-evidence"
+          specimen_root="$GITHUB_WORKSPACE/specimen"
+          runtime_root="$GITHUB_WORKSPACE/kiln-runtime"
+
+          {
+            echo "repository=$GITHUB_REPOSITORY"
+            echo "ref=$GITHUB_REF"
+            echo "sha=$GITHUB_SHA"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "native_test_result=$KILN_NATIVE_TEST_RESULT"
+            echo "kiln_repository=AnarchI-Technologies-MAIN/kiln"
+            echo "kiln_requested_ref=$KILN_REQUESTED_REF"
+            echo "kiln_resolved_sha=$(git -C "$runtime_root" rev-parse HEAD)"
+            echo "specimen_resolved_sha=$(git -C "$specimen_root" rev-parse HEAD)"
+          } | tee "$evidence_root/github-specimen.txt"
+
+      - name: Record host capabilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/kiln-venv/bin/kiln" capabilities --json \
+            | tee "$RUNNER_TEMP/kiln-evidence/capabilities.json"
+
+      - name: Inspect caller specimen
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/kiln-venv/bin/kiln" \
+            inspect "$GITHUB_WORKSPACE/specimen" --json \
+            | tee "$RUNNER_TEMP/kiln-evidence/inspect.json"
+
+      - name: Verify pristine specimen before Kiln
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C "$GITHUB_WORKSPACE/specimen" status --short
+          git -C "$GITHUB_WORKSPACE/specimen" diff --exit-code
+          test -z "$(git -C "$GITHUB_WORKSPACE/specimen" status --porcelain)"
+
+      - name: Give caller commit its turn in Kiln
+        shell: bash
+        env:
+          KILN_ADAPTER_INPUT: ${{ inputs.adapter }}
+          KILN_ENTRY_INPUT: ${{ inputs.entry }}
+          KILN_MAX_PASSES_INPUT: ${{ inputs.max_passes }}
+          KILN_UNTIL_INPUT: ${{ inputs.until }}
+          KILN_WORKERS_INPUT: ${{ inputs.workers }}
+          KILN_ADJUDICATION_INBOX: ${{ runner.temp }}/kiln-evidence/adjudication-candidates.json
+        run: |
+          set -euo pipefail
+
+          case "$KILN_UNTIL_INPUT" in
+            stable|fracture|adjudication) ;;
+            *) echo "Unsupported Kiln stopping policy: $KILN_UNTIL_INPUT" >&2; exit 2 ;;
+          esac
+
+          "$RUNNER_TEMP/kiln-venv/bin/kiln" \
+            cycle "$GITHUB_WORKSPACE/specimen" \
+            --adapter "$KILN_ADAPTER_INPUT" \
+            --entry "$KILN_ENTRY_INPUT" \
+            --destructive \
+            --max-passes "$KILN_MAX_PASSES_INPUT" \
+            --workers "$KILN_WORKERS_INPUT" \
+            --until "$KILN_UNTIL_INPUT" \
+            --session-root "$RUNNER_TEMP/kiln-evidence/session" \
+            --json \
+            | tee "$RUNNER_TEMP/kiln-evidence/cycle.json"
+
+      - name: Verify source preservation
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C "$GITHUB_WORKSPACE/specimen" status --short
+          git -C "$GITHUB_WORKSPACE/specimen" diff --exit-code
+          test -z "$(git -C "$GITHUB_WORKSPACE/specimen" status --porcelain)"
+
+      - name: Upload Kiln evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kiln-evidence-${{ github.repository_id }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/kiln-evidence
+          if-no-files-found: warn
+          retention-days: ${{ inputs.artifact_retention_days }}

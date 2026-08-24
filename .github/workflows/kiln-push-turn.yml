@@ -8,118 +8,39 @@ permissions:
   contents: read
 
 jobs:
-  kiln-turn:
-    name: Kiln self-specimen
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
+  native-tests:
+    name: Kiln native baseline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
 
     steps:
       - name: Checkout exact pushed revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Install Python 3.12
-        uses: actions/setup-python@v5
+      - name: Install Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
 
-      - name: Establish detached Kiln runtime
+      - name: Run strict native tests
         shell: bash
-        run: |
-          set -o pipefail
+        run: python -W error::ResourceWarning -m unittest discover -s tests
 
-          rm -rf /tmp/kiln-package
-          rm -rf /tmp/kiln-venv
-          rm -rf /tmp/kiln-evidence
-
-          mkdir -p /tmp/kiln-package
-          mkdir -p /tmp/kiln-evidence
-
-          git archive --format=tar HEAD | tar -xf - -C /tmp/kiln-package
-
-          python -m venv /tmp/kiln-venv
-
-          /tmp/kiln-venv/bin/python -m pip install --upgrade pip
-          /tmp/kiln-venv/bin/python -m pip install /tmp/kiln-package
-          /tmp/kiln-venv/bin/python -m pip install pytest
-
-          export PATH="/tmp/kiln-venv/bin:$PATH"
-
-          python -m pytest --version \
-            | tee /tmp/kiln-evidence/pytest-version.txt
-
-          kiln --version \
-            | tee /tmp/kiln-evidence/kiln-version.txt
-
-      - name: Record specimen identity
-        shell: bash
-        run: |
-          {
-            echo "repository=$GITHUB_REPOSITORY"
-            echo "ref=$GITHUB_REF"
-            echo "sha=$GITHUB_SHA"
-            echo "run_id=$GITHUB_RUN_ID"
-            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
-          } | tee /tmp/kiln-evidence/github-specimen.txt
-
-      - name: Record host capabilities
-        shell: bash
-        run: |
-          set -o pipefail
-          export PATH="/tmp/kiln-venv/bin:$PATH"
-
-          kiln capabilities --json \
-            | tee /tmp/kiln-evidence/capabilities.json
-
-      - name: Inspect pushed specimen
-        shell: bash
-        run: |
-          set -o pipefail
-          export PATH="/tmp/kiln-venv/bin:$PATH"
-
-          kiln inspect "$GITHUB_WORKSPACE" --json \
-            | tee /tmp/kiln-evidence/inspect.json
-
-      - name: Verify pristine target before Kiln
-        shell: bash
-        run: |
-          git status --short
-          git diff --exit-code
-          test -z "$(git status --porcelain)"
-
-      - name: Give pushed commit its turn in Kiln
-        shell: bash
-        env:
-          KILN_ADJUDICATION_INBOX: /tmp/kiln-evidence/adjudication-candidates.json
-        run: |
-          set -o pipefail
-          export PATH="/tmp/kiln-venv/bin:$PATH"
-
-          kiln cycle "$GITHUB_WORKSPACE" \
-            --adapter python \
-            --entry tests \
-            --destructive \
-            --max-passes 8 \
-            --until stable \
-            --session-root /tmp/kiln-evidence/session \
-            --json \
-            | tee /tmp/kiln-evidence/cycle.json
-
-      - name: Verify source preservation
-        if: always()
-        shell: bash
-        run: |
-          git status --short
-          git diff --exit-code
-          test -z "$(git status --porcelain)"
-
-      - name: Upload Kiln evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: kiln-evidence-${{ github.sha }}-${{ github.run_attempt }}
-          path: /tmp/kiln-evidence
-          if-no-files-found: warn
-          retention-days: 30
+  kiln-turn:
+    name: Kiln self-specimen
+    needs: native-tests
+    if: always()
+    uses: ./.github/workflows/kiln-proof.yml
+    with:
+      adapter: python
+      entry: tests
+      native_test_result: ${{ needs.native-tests.result }}
+      kiln_ref: 55362ad3599e8825937ce462ac0a934f1494cb10
+      max_passes: 8
+      workers: 1
+      until: stable
+      python_version: '3.12'
+      artifact_retention_days: 30
