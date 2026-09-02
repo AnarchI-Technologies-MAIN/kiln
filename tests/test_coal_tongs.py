@@ -282,28 +282,36 @@ class CoalTongsTests(unittest.TestCase):
                 expand_contract_command(("missing-kiln-runtime", "test"), Path(temp), "")
 
     def test_shared_deadline_times_out(self):
-        payload = command_payload([sys.executable, "-c", "import time; time.sleep(1)"])
+        payload = command_payload(["python3", "timeout_test.py"])
         contract = validate_coal_contract_payload(payload, external=True)
 
         with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "timeout_test.py").write_text(
+                "import time\ntime.sleep(1)\n",
+                encoding="utf-8",
+            )
             with self.assertRaises(subprocess.TimeoutExpired):
-                run_contract_tests(contract, Path(temp), "", dict(os.environ), 0.01)
+                run_contract_tests(contract, root, "", dict(os.environ), 0.01)
 
     def test_test_failure_needs_parseable_proof(self):
-        proven = command_payload([
-            sys.executable,
-            "-c",
-            "print('CASE nova.case');print('FAIL test.nova:1');raise SystemExit(101)",
-        ])
-        malformed = command_payload([
-            sys.executable,
-            "-c",
-            "print('not proof');raise SystemExit(1)",
-        ])
+        proven = command_payload(["python3", "proven_test.py"])
+        malformed = command_payload(["python3", "malformed_test.py"])
 
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "test.nova").write_text("check(yes)\n", encoding="utf-8")
+            (root / "proven_test.py").write_text(
+                "print('CASE nova.case')\n"
+                "print('FAIL test.nova:1')\n"
+                "raise SystemExit(101)\n",
+                encoding="utf-8",
+            )
+            (root / "malformed_test.py").write_text(
+                "print('not proof')\n"
+                "raise SystemExit(1)\n",
+                encoding="utf-8",
+            )
 
             for payload, expected in ((proven, 1), (malformed, 2)):
                 (root / COAL_CONTRACT_FILENAME).write_text(
@@ -314,15 +322,15 @@ class CoalTongsTests(unittest.TestCase):
                 self.assertEqual(result.returncode, expected)
 
     def test_shell_injection_token_is_one_inert_argument(self):
-        payload = command_payload([
-            sys.executable,
-            "-c",
-            "import sys;raise SystemExit(0 if sys.argv[1] == '; touch pwned' else 1)",
-            "; touch pwned",
-        ])
+        payload = command_payload(["python3", "injection_test.py", "; touch pwned"])
 
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
+            (root / "injection_test.py").write_text(
+                "import sys\n"
+                "raise SystemExit(0 if sys.argv[1] == '; touch pwned' else 1)\n",
+                encoding="utf-8",
+            )
             (root / COAL_CONTRACT_FILENAME).write_text(json.dumps(payload), encoding="utf-8")
             result = run_adapter_tests("nova", root, "", timeout_seconds=10)
 
@@ -330,13 +338,13 @@ class CoalTongsTests(unittest.TestCase):
             self.assertFalse((root / "pwned").exists())
 
     def test_runtime_rejects_casefolded_control_environment_and_bad_templates(self):
-        environment = command_payload([sys.executable, "--version"])
+        environment = command_payload(["python3", "--version"])
         environment["execution"]["environment"]["kiln_port"] = "9000"
 
         with self.assertRaisesRegex(RuntimeError, "control variables"):
             validate_coal_contract_payload(environment, external=True)
 
-        placeholder = command_payload([sys.executable, "--version"])
+        placeholder = command_payload(["python3", "--version"])
         placeholder["execution"]["environment"]["CACHE"] = "{specimen"
 
         with self.assertRaisesRegex(RuntimeError, "malformed placeholders"):

@@ -38,6 +38,54 @@ _FORBIDDEN_SUBCOMMANDS = {
     "yarn": {"npm", "publish"},
 }
 
+# Allowlist of executables permitted for external coal contracts
+# These are common build/test tools that are considered safe when used
+# without shell/interpreter wrapper flags
+_EXTERNAL_ALLOWED_EXECUTABLES = {
+    "cargo",
+    "cmake",
+    "dotnet",
+    "gcc",
+    "go",
+    "gradle",
+    "javac",
+    "make",
+    "maven",
+    "mvn",
+    "node",
+    "npm",
+    "npx",
+    "pnpm",
+    "pytest",
+    "python",
+    "python2",
+    "python3",
+    "ruby",
+    "rustc",
+    "yarn",
+}
+
+# Shell executables that can execute arbitrary code via wrapper flags
+_SHELL_EXECUTABLES = {
+    "ash",
+    "bash",
+    "cmd",
+    "dash",
+    "ksh",
+    "sh",
+    "zsh",
+}
+
+# Flags that enable arbitrary code execution in shells/interpreters
+_ARBITRARY_EXECUTION_FLAGS = {
+    "-c",      # shell/python/ruby command string
+    "-e",      # perl/ruby one-liner
+    "/c",      # cmd.exe command
+    "/k",      # cmd.exe command (keep window open)
+    "--eval",  # node.js eval
+    "-Command", # PowerShell command
+}
+
 
 @dataclass(frozen=True)
 class CoalMutationRule:
@@ -380,6 +428,7 @@ def _command_executable_name(command: Tuple[str, ...]) -> str:
 def _validate_command_authority(
     command: Tuple[str, ...],
     field: str,
+    external: bool = False,
 ) -> None:
     executable = _command_executable_name(command)
     lowered_tokens = {
@@ -401,6 +450,43 @@ def _validate_command_authority(
             "coal command requests forbidden promotion or deployment authority: "
             + field
         )
+
+    # Additional validation for external contracts
+    if external:
+        # Enforce allowlist: only permit known safe executables
+        if executable not in _EXTERNAL_ALLOWED_EXECUTABLES:
+            raise RuntimeError(
+                "coal command uses a non-allowlisted executable for external contracts: "
+                + field
+                + " (executable: "
+                + executable
+                + ")"
+            )
+
+        # Block shell executables entirely (they are inherently dangerous)
+        if executable in _SHELL_EXECUTABLES:
+            raise RuntimeError(
+                "coal command uses a shell executable that can bypass validation: "
+                + field
+                + " (executable: "
+                + executable
+                + ")"
+            )
+
+        # Check for arbitrary execution flags in any position
+        for token in command[1:]:
+            token_lower = token.casefold()
+            # Check exact matches and case-insensitive matches for flags
+            if token in _ARBITRARY_EXECUTION_FLAGS or token_lower in {
+                flag.casefold() for flag in _ARBITRARY_EXECUTION_FLAGS
+            }:
+                raise RuntimeError(
+                    "coal command uses a flag that enables arbitrary code execution: "
+                    + field
+                    + " (flag: "
+                    + token
+                    + ")"
+                )
 
 
 def validate_coal_contract_payload(
@@ -671,7 +757,7 @@ def validate_coal_contract_payload(
         )
 
         if external:
-            _validate_command_authority(command, field)
+            _validate_command_authority(command, field, external=True)
 
         for token in command:
             _validate_template(token, field)

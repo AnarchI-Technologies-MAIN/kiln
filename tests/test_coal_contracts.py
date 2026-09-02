@@ -55,22 +55,13 @@ def coal_payload(
             "driver": "command",
             "rebuildCommands": [
                 [
-                    python_executable,
-                    "-c",
-                    (
-                        "from pathlib import Path;"
-                        "Path('rebuilt.marker').write_text('ready')"
-                    ),
+                    "python3",
+                    "build.py",
                 ]
             ],
             "testCommand": [
-                python_executable,
-                "-c",
-                (
-                    "from pathlib import Path;"
-                    "raise SystemExit(0 if "
-                    "Path('rebuilt.marker').read_text() == 'ready' else 1)"
-                ),
+                "python3",
+                "test.py",
             ],
             "entryKind": "opaque",
             "appendEntry": False,
@@ -102,6 +93,18 @@ class CoalContractTests(unittest.TestCase):
                 indent=2,
                 sort_keys=True,
             ) + "\n",
+            encoding="utf-8",
+        )
+        # Create the build and test scripts referenced by the contract
+        (root / "build.py").write_text(
+            "from pathlib import Path\n"
+            "Path('rebuilt.marker').write_text('ready')\n",
+            encoding="utf-8",
+        )
+        (root / "test.py").write_text(
+            "from pathlib import Path\n"
+            "import sys\n"
+            "sys.exit(0 if Path('rebuilt.marker').read_text() == 'ready' else 1)\n",
             encoding="utf-8",
         )
 
@@ -155,6 +158,46 @@ class CoalContractTests(unittest.TestCase):
         payload["execution"]["environment"]["KILN_PORT"] = "9000"
 
         with self.assertRaisesRegex(RuntimeError, "control variables"):
+            validate_coal_contract_payload(
+                payload,
+                external=True,
+            )
+
+    def test_external_contract_rejects_arbitrary_execution_flags(self):
+        # Test that -c flag is rejected for external contracts
+        payload = coal_payload(sys.executable)
+        payload["execution"]["testCommand"] = ["python3", "-c", "print('hello')"]
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "arbitrary code execution",
+        ):
+            validate_coal_contract_payload(
+                payload,
+                external=True,
+            )
+
+        # Test that shell executables are rejected
+        payload = coal_payload(sys.executable)
+        payload["execution"]["testCommand"] = ["sh", "test.sh"]
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "shell executable",
+        ):
+            validate_coal_contract_payload(
+                payload,
+                external=True,
+            )
+
+        # Test that non-allowlisted executables are rejected
+        payload = coal_payload(sys.executable)
+        payload["execution"]["testCommand"] = ["arbitrary_exe", "arg"]
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "non-allowlisted executable",
+        ):
             validate_coal_contract_payload(
                 payload,
                 external=True,
