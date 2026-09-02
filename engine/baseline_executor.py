@@ -11,6 +11,11 @@ import sys
 import tempfile
 import time
 
+from engine.isolation_boundary import (
+    warn_insufficient_isolation,
+    sanitize_environment,
+)
+
 
 @dataclass(frozen=True)
 class BaselineResult:
@@ -77,6 +82,9 @@ def execute_one(plan: dict, preflight: dict, session_root: Path) -> BaselineResu
     repo = Path(plan["repository_root"]).resolve()
     source_commit = preflight["source_commit"]
 
+    # Emit security warning about insufficient isolation
+    warn_insufficient_isolation("Baseline test execution")
+
     before = git(repo, "rev-parse", "HEAD")
 
     if before.returncode != 0:
@@ -111,7 +119,11 @@ def execute_one(plan: dict, preflight: dict, session_root: Path) -> BaselineResu
     worktree_removed = False
 
     try:
-        env = os.environ.copy()
+        # Sanitize environment to filter sensitive credentials
+        # Note: This is defense-in-depth, NOT a security boundary
+        env = sanitize_environment(
+            preserve_keys={"PYTHONPATH"}
+        )
         env["PYTHONPATH"] = str(worktree)
 
         command = runner_command(

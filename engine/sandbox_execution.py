@@ -30,6 +30,9 @@ from engine.proof_metadata import (
     build_proof_metadata,
     proof_metadata_payload,
 )
+from engine.isolation_boundary import (
+    warn_insufficient_isolation,
+)
 
 
 PROOF_EVIDENCE_VERSION = "KILN-PROOF-EVIDENCE-3"
@@ -424,6 +427,10 @@ class SandboxExecutor:
         mutation_id: str,
         adapter: str = "",
     ) -> SandboxLease:
+        # Emit security warning about insufficient isolation
+        # Note: This warning is emitted once per sandbox materialization
+        warn_insufficient_isolation(f"Sandbox execution (adapter: {adapter or 'unknown'})")
+        
         sandbox_id = sandbox_identity(
             cycle_id,
             pass_number,
