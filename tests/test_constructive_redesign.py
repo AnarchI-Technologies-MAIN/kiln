@@ -296,6 +296,9 @@ class ConstructiveRedesignTests(unittest.TestCase):
                 "repair.py",
                 head,
                 approved=True,
+                branch_name=(
+                    "kiln/staging-adjudication/test-candidate"
+                ),
             )
 
             self.assertTrue(result.promotion_authorized)
@@ -351,6 +354,9 @@ class ConstructiveRedesignTests(unittest.TestCase):
                 "repair.py",
                 old_head,
                 approved=True,
+                branch_name=(
+                    "kiln/staging-adjudication/test-candidate"
+                ),
             )
 
             self.assertFalse(result.promotion_authorized)
@@ -498,7 +504,7 @@ class ConstructiveRedesignTests(unittest.TestCase):
                 "value = 9\n",
             )
 
-    def test_promotion_commits_pushes_and_verifies_remote(self):
+    def test_proven_improvement_stages_without_mutating_source_branch(self):
         import subprocess
         import tempfile
         from pathlib import Path
@@ -592,6 +598,7 @@ class ConstructiveRedesignTests(unittest.TestCase):
                 "repair.py",
                 head,
                 True,
+                "kiln/staging-adjudication/test-candidate",
             )
 
             result=execute_promotion(
@@ -599,7 +606,7 @@ class ConstructiveRedesignTests(unittest.TestCase):
                 preflight,
                 repo,
                 "origin",
-                "main",
+                "kiln/staging-adjudication/test-candidate",
                 "kiln: proven redesign",
             )
 
@@ -618,8 +625,61 @@ class ConstructiveRedesignTests(unittest.TestCase):
 
             self.assertEqual(
                 result.disposition,
-                "PROMOTION_VERIFIED",
+                "ADJUDICATION_BRANCH_VERIFIED",
             )
+
+            self.assertTrue(
+                result.human_adjudication_required
+            )
+
+            self.assertEqual(
+                subprocess.check_output(
+                    ["git", "-C", str(repo), "rev-parse", "HEAD"],
+                    text=True,
+                ).strip(),
+                head,
+            )
+
+            self.assertEqual(
+                original.read_text(encoding="utf-8"),
+                "value = 1\n",
+            )
+
+            main_remote = subprocess.run(
+                [
+                    "git", "-C", str(repo), "ls-remote", "origin",
+                    "refs/heads/main",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(main_remote.stdout.strip(), "")
+
+    def test_default_branch_is_rejected_before_staging(self):
+        from engine.constructive_redesign import (
+            adjudication_branch_failures,
+        )
+
+        self.assertIn(
+            "ADJUDICATION_BRANCH_REQUIRED",
+            adjudication_branch_failures("main"),
+        )
+
+        self.assertEqual(
+            adjudication_branch_failures(
+                "kiln/staging-adjudication/proven-candidate"
+            ),
+            (),
+        )
+
+        self.assertIn(
+            "ADJUDICATION_BRANCH_INVALID",
+            adjudication_branch_failures(
+                "kiln/staging-adjudication/a//b"
+            ),
+        )
 
     def test_verified_promotion_removes_only_promoted_candidate(self):
         import csv
@@ -673,8 +733,10 @@ class ConstructiveRedesignTests(unittest.TestCase):
                 candidate_id=first.candidate_id,
                 commit_hash="abc123",
                 remote_commit="abc123",
+                branch_name="kiln/staging-adjudication/merged",
                 pushed=True,
                 remote_verified=True,
+                human_adjudication_required=False,
                 disposition="PROMOTION_VERIFIED",
             )
 
@@ -748,9 +810,11 @@ class ConstructiveRedesignTests(unittest.TestCase):
                 candidate_id=artifact.candidate_id,
                 commit_hash="abc123",
                 remote_commit="",
+                branch_name="kiln/staging-adjudication/unverified",
                 pushed=False,
                 remote_verified=False,
-                disposition="PROMOTION_PUSH_FAILED",
+                human_adjudication_required=True,
+                disposition="ADJUDICATION_PUSH_FAILED",
             )
 
             remaining=close_promoted_candidate(

@@ -11,6 +11,11 @@ import sys
 import tempfile
 import time
 
+from engine.isolation_boundary import (
+    warn_insufficient_isolation,
+    sanitize_environment,
+)
+
 
 @dataclass(frozen=True)
 class BaselineResult:
@@ -40,7 +45,50 @@ def git(repo: Path, *args: str):
     )
 
 
-def runner_command(runner: str, repository_path: str):
+def validate_repository_path(repository_path: str, worktree: Path) -> None:
+    """
+    Validate that repository_path is safe and contained within the worktree.
+    
+    Raises RuntimeError if the path is absolute or escapes the worktree.
+    """
+    # Reject absolute paths
+    if Path(repository_path).is_absolute():
+        raise RuntimeError(
+            f"repository_path must be relative, got absolute path: {repository_path}"
+        )
+    
+    # Normalize path separators
+    normalized = repository_path.replace("\\", "/")
+    target = Path(normalized)
+    
+    # Resolve the full path and verify containment
+    full_path = (worktree / target).resolve()
+    worktree_resolved = worktree.resolve()
+    
+    try:
+        # Verify the resolved path is relative to the worktree
+        full_path.relative_to(worktree_resolved)
+    except ValueError:
+        raise RuntimeError(
+            f"repository_path escapes worktree boundary: {repository_path}"
+        )
+
+
+def runner_command(runner: str, repository_path: str, worktree: Path):
+    """
+    Build the test runner command.
+    
+    Args:
+        runner: The test runner to use (pytest, python-unittest, etc.)
+        repository_path: The relative path to the test file within the repository
+        worktree: The worktree root path for validation
+    
+    Returns:
+        List of command arguments for subprocess execution
+    """
+    # Validate path safety before building command
+    validate_repository_path(repository_path, worktree)
+    
     normalized = repository_path.replace("\\", "/")
     target = Path(normalized)
 
@@ -77,6 +125,9 @@ def execute_one(plan: dict, preflight: dict, session_root: Path) -> BaselineResu
     repo = Path(plan["repository_root"]).resolve()
     source_commit = preflight["source_commit"]
 
+    # Emit security warning about insufficient isolation
+    warn_insufficient_isolation("Baseline test execution")
+
     before = git(repo, "rev-parse", "HEAD")
 
     if before.returncode != 0:
@@ -111,12 +162,17 @@ def execute_one(plan: dict, preflight: dict, session_root: Path) -> BaselineResu
     worktree_removed = False
 
     try:
-        env = os.environ.copy()
+        # Sanitize environment to filter sensitive credentials
+        # Note: This is defense-in-depth, NOT a security boundary
+        env = sanitize_environment(
+            preserve_keys={"PYTHONPATH"}
+        )
         env["PYTHONPATH"] = str(worktree)
 
         command = runner_command(
             plan["runner"],
             plan["repository_path"],
+            worktree,
         )
 
         run = subprocess.run(

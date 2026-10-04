@@ -360,7 +360,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     promote = commands.add_parser(
         "promote",
-        help="Promote an approved redesign through Core 030.",
+        help=(
+            "Commit an approved redesign only to an isolated "
+            "Kiln adjudication branch."
+        ),
     )
     promote.add_argument("target")
     promote.add_argument("--artifact", required=True)
@@ -369,11 +372,38 @@ def build_parser() -> argparse.ArgumentParser:
     promote.add_argument("--destination", required=True)
     promote.add_argument("--expected-head", required=True)
     promote.add_argument("--remote", default="origin")
-    promote.add_argument("--branch", required=True)
+    promote.add_argument(
+        "--branch",
+        required=True,
+        help=(
+            "Required kiln/staging-adjudication/... branch; "
+            "default branches are rejected."
+        ),
+    )
     promote.add_argument("--message", required=True)
+    promote.add_argument(
+        "--base",
+        default="main",
+        help="Default branch that the draft PR proposes to mutate.",
+    )
+    promote.add_argument(
+        "--repository",
+        default="",
+        help=(
+            "GitHub OWNER/REPO override; otherwise inferred "
+            "from the promotion remote."
+        ),
+    )
     promote.add_argument("--baseline-preserved", action="store_true")
     promote.add_argument("--fracture-mitigated", action="store_true")
-    promote.add_argument("--approve", action="store_true")
+    promote.add_argument(
+        "--approve",
+        action="store_true",
+        help=(
+            "Authorize staging only; merge still requires "
+            "human adjudication."
+        ),
+    )
     promote.add_argument("--json", action="store_true")
     cycle = commands.add_parser(
         "cycle",
@@ -983,9 +1013,19 @@ def main(argv=None):
             args.approve,
             args.baseline_preserved,
             args.fracture_mitigated,
+            args.base,
+            args.repository,
         )
         emit(result, args.json)
-        return 0 if result.remote_verified else 11
+        return (
+            0
+            if (
+                result.remote_verified
+                and result.draft_pr_created
+                and result.cycle_reignited
+            )
+            else 11
+        )
 
     if args.command == "cycle":
         return command_cycle(args)

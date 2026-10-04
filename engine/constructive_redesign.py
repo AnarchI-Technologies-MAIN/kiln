@@ -5,6 +5,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Tuple
 import csv
+import re
 import shutil
 
 
@@ -288,6 +289,7 @@ class PromotionPreflight:
     approved: bool
     target_head: str
     destination_path: str
+    branch_name: str
     promotion_authorized: bool
     disposition: str
     failed_gates: Tuple[str, ...]
@@ -304,6 +306,54 @@ def git(repo: Path, *args: str):
     )
 
 
+ADJUDICATION_BRANCH_PREFIX = (
+    "kiln/staging-adjudication/"
+)
+
+
+def adjudication_branch_failures(
+    branch_name: str,
+) -> Tuple[str, ...]:
+    branch = branch_name.strip()
+    failures = []
+
+    if not branch.startswith(
+        ADJUDICATION_BRANCH_PREFIX
+    ):
+        failures.append(
+            "ADJUDICATION_BRANCH_REQUIRED"
+        )
+
+    suffix = branch[
+        len(ADJUDICATION_BRANCH_PREFIX):
+    ]
+    segments = branch.split("/")
+
+    if (
+        branch != branch_name
+        or not suffix
+        or any(
+            not segment
+            or segment.startswith(".")
+            or segment.endswith((".", ".lock"))
+            for segment in segments
+        )
+        or branch.startswith("refs/")
+        or branch.endswith(("/", ".", ".lock"))
+        or ".." in branch
+        or "@{" in branch
+        or re.search(
+            r"[\x00-\x20\x7f~^:?*\\\[]",
+            branch,
+        )
+    ):
+        failures.append(
+            "ADJUDICATION_BRANCH_INVALID"
+        )
+
+    return tuple(sorted(set(failures)))
+
+
 def preflight_promotion(
     artifact: StagedArtifact,
     adjudication: RedesignAdjudication,
@@ -312,6 +362,7 @@ def preflight_promotion(
     destination_path: str,
     expected_head: str,
     approved: bool,
+    branch_name: str,
 ) -> PromotionPreflight:
     repo = Path(target_repo).resolve()
     failures = []
@@ -324,6 +375,12 @@ def preflight_promotion(
 
     if not contamination.clean:
         failures.append("CONTAMINATION_GATE_FAILED")
+
+    failures.extend(
+        adjudication_branch_failures(
+            branch_name
+        )
+    )
 
     staged = Path(artifact.staged_path)
 
@@ -371,6 +428,7 @@ def preflight_promotion(
         approved=approved,
         target_head=current_head,
         destination_path=destination_path,
+        branch_name=branch_name,
         promotion_authorized=authorized,
         disposition=disposition,
         failed_gates=tuple(sorted(set(failures))),
@@ -543,8 +601,10 @@ class PromotionResult:
     candidate_id: str
     commit_hash: str
     remote_commit: str
+    branch_name: str
     pushed: bool
     remote_verified: bool
+    human_adjudication_required: bool
     disposition: str
 
 
@@ -556,7 +616,7 @@ def execute_promotion(
     branch_name: str,
     commit_message: str,
 ) -> PromotionResult:
-    import shutil
+    import tempfile
 
     repo = Path(target_repo).resolve()
 
@@ -565,118 +625,163 @@ def execute_promotion(
             "promotion preflight is not authorized"
         )
 
+    branch_failures = adjudication_branch_failures(
+        branch_name
+    )
+
+    if branch_failures:
+        raise RuntimeError(
+            "promotion branch is not an adjudication branch: "
+            + ", ".join(branch_failures)
+        )
+
+    if branch_name != preflight.branch_name:
+        raise RuntimeError(
+            "promotion branch differs from authorized preflight"
+        )
+
     staged = Path(
         artifact.staged_path
     )
 
-    destination = (
-        repo
-        / preflight.destination_path
-    ).resolve()
+    commit_hash = ""
+    pushed = False
 
-    try:
-        destination.relative_to(repo)
-    except ValueError:
-        raise RuntimeError(
-            "promotion destination escaped repository"
-        )
+    with tempfile.TemporaryDirectory(
+        prefix="kiln-adjudication-"
+    ) as temp:
+        worktree = (
+            Path(temp)
+            / "candidate"
+        ).resolve()
 
-    destination.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    shutil.copy2(
-        staged,
-        destination,
-    )
-
-    add = git(
-        repo,
-        "add",
-        "--",
-        preflight.destination_path,
-    )
-
-    if add.returncode != 0:
-        raise RuntimeError(
-            "git staging failed"
-        )
-
-    staged_names = git(
-        repo,
-        "diff",
-        "--cached",
-        "--name-only",
-    )
-
-    if staged_names.returncode != 0:
-        raise RuntimeError(
-            "unable to inspect staged paths"
-        )
-
-    names = tuple(
-        line.strip()
-        for line in staged_names.stdout.splitlines()
-        if line.strip()
-    )
-
-    normalized_destination = (
-        Path(
-            preflight.destination_path
-        ).as_posix()
-    )
-
-    if names != (
-        normalized_destination,
-    ):
-        git(
+        create_worktree = git(
             repo,
-            "reset",
-            "HEAD",
-            "--",
-            preflight.destination_path,
+            "worktree",
+            "add",
+            "--detach",
+            str(worktree),
+            preflight.target_head,
         )
 
-        raise RuntimeError(
-            "staged path set differs from authorized artifact"
-        )
+        if create_worktree.returncode != 0:
+            raise RuntimeError(
+                "unable to create isolated adjudication worktree"
+            )
 
-    commit = git(
-        repo,
-        "commit",
-        "-m",
-        commit_message,
-        "--",
-        preflight.destination_path,
-    )
+        try:
+            destination = (
+                worktree
+                / preflight.destination_path
+            ).resolve()
 
-    if commit.returncode != 0:
-        raise RuntimeError(
-            "promotion commit failed"
-        )
+            try:
+                destination.relative_to(
+                    worktree
+                )
+            except ValueError:
+                raise RuntimeError(
+                    "promotion destination escaped repository"
+                )
 
-    head = git(
-        repo,
-        "rev-parse",
-        "HEAD",
-    )
+            destination.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
 
-    if head.returncode != 0:
-        raise RuntimeError(
-            "unable to resolve promotion commit"
-        )
+            shutil.copy2(
+                staged,
+                destination,
+            )
 
-    commit_hash = head.stdout.strip()
+            add = git(
+                worktree,
+                "add",
+                "--",
+                preflight.destination_path,
+            )
 
-    push = git(
-        repo,
-        "push",
-        remote_name,
-        f"HEAD:{branch_name}",
-    )
+            if add.returncode != 0:
+                raise RuntimeError(
+                    "git staging failed"
+                )
 
-    pushed = push.returncode == 0
+            staged_names = git(
+                worktree,
+                "diff",
+                "--cached",
+                "--name-only",
+            )
+
+            if staged_names.returncode != 0:
+                raise RuntimeError(
+                    "unable to inspect staged paths"
+                )
+
+            names = tuple(
+                line.strip()
+                for line in staged_names.stdout.splitlines()
+                if line.strip()
+            )
+
+            normalized_destination = (
+                Path(
+                    preflight.destination_path
+                ).as_posix()
+            )
+
+            if names != (
+                normalized_destination,
+            ):
+                raise RuntimeError(
+                    "staged path set differs from authorized artifact"
+                )
+
+            commit = git(
+                worktree,
+                "commit",
+                "-m",
+                commit_message,
+                "--",
+                preflight.destination_path,
+            )
+
+            if commit.returncode != 0:
+                raise RuntimeError(
+                    "adjudication staging commit failed"
+                )
+
+            head = git(
+                worktree,
+                "rev-parse",
+                "HEAD",
+            )
+
+            if head.returncode != 0:
+                raise RuntimeError(
+                    "unable to resolve adjudication staging commit"
+                )
+
+            commit_hash = head.stdout.strip()
+
+            push = git(
+                worktree,
+                "push",
+                "--",
+                remote_name,
+                "HEAD:refs/heads/"
+                + branch_name,
+            )
+
+            pushed = push.returncode == 0
+        finally:
+            git(
+                repo,
+                "worktree",
+                "remove",
+                "--force",
+                str(worktree),
+            )
     remote_commit = ""
     remote_verified = False
 
@@ -684,6 +789,7 @@ def execute_promotion(
         remote = git(
             repo,
             "ls-remote",
+            "--",
             remote_name,
             f"refs/heads/{branch_name}",
         )
@@ -698,20 +804,28 @@ def execute_promotion(
                     == commit_hash
                 )
 
-    disposition = "PROMOTION_VERIFIED"
+    disposition = (
+        "ADJUDICATION_BRANCH_VERIFIED"
+    )
 
     if not pushed:
-        disposition = "PROMOTION_PUSH_FAILED"
+        disposition = (
+            "ADJUDICATION_PUSH_FAILED"
+        )
 
     if pushed and not remote_verified:
-        disposition = "PROMOTION_REMOTE_VERIFICATION_FAILED"
+        disposition = (
+            "ADJUDICATION_REMOTE_VERIFICATION_FAILED"
+        )
 
     return PromotionResult(
         candidate_id=artifact.candidate_id,
         commit_hash=commit_hash,
         remote_commit=remote_commit,
+        branch_name=branch_name,
         pushed=pushed,
         remote_verified=remote_verified,
+        human_adjudication_required=True,
         disposition=disposition,
     )
 

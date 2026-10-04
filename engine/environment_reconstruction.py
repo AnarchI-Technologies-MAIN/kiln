@@ -5,6 +5,11 @@ from pathlib import Path
 from shutil import which
 from typing import Tuple
 
+from engine.isolation_boundary import (
+    warn_insufficient_isolation,
+    sanitize_environment,
+)
+
 
 @dataclass(frozen=True)
 class ReconstructionCapability:
@@ -76,6 +81,9 @@ def reconstruct_python(
     import sys
     import tempfile
 
+    # Emit security warning about insufficient isolation
+    warn_insufficient_isolation("Python reconstruction test execution")
+
     source = Path(source_root).resolve()
 
     if not source.exists():
@@ -123,6 +131,10 @@ def reconstruct_python(
             disposition="RECONSTRUCTION_TARGET_MISSING",
         )
 
+    # Sanitize environment to filter sensitive credentials
+    # Note: This is defense-in-depth, NOT a security boundary
+    env = sanitize_environment()
+
     run = subprocess.run(
         [
             sys.executable,
@@ -135,6 +147,7 @@ def reconstruct_python(
             target.name,
         ],
         cwd=str(specimen),
+        env=env,
         capture_output=True,
         text=True,
         check=False,
@@ -193,6 +206,9 @@ def reconstruct_javascript(
     import shutil
     import subprocess
     import tempfile
+
+    # Emit security warning about insufficient isolation
+    warn_insufficient_isolation("JavaScript reconstruction test execution")
 
     source = Path(source_root).resolve()
 
@@ -304,9 +320,14 @@ def reconstruct_javascript(
             "--no-fund",
         ]
 
+    # Sanitize environment to filter sensitive credentials
+    # Note: This is defense-in-depth, NOT a security boundary
+    env = sanitize_environment()
+
     install = subprocess.run(
         install_command,
         cwd=str(specimen),
+        env=env,
         capture_output=True,
         text=True,
         check=False,
@@ -323,6 +344,7 @@ def reconstruct_javascript(
                 "--",
             ],
             cwd=str(specimen),
+            env=env,
             capture_output=True,
             text=True,
             check=False,
@@ -389,6 +411,9 @@ def reconstruct_powershell(
     import subprocess
     import tempfile
 
+    # Emit security warning about insufficient isolation
+    warn_insufficient_isolation("PowerShell reconstruction test execution")
+
     source = Path(source_root).resolve()
 
     if not source.exists():
@@ -454,6 +479,10 @@ def reconstruct_powershell(
             disposition="RECONSTRUCTION_TARGET_MISSING",
         )
 
+    # Sanitize environment to filter sensitive credentials
+    # Note: This is defense-in-depth, NOT a security boundary
+    env = sanitize_environment()
+
     run = subprocess.run(
         [
             pwsh_executable,
@@ -463,6 +492,7 @@ def reconstruct_powershell(
             str(target),
         ],
         cwd=str(specimen),
+        env=env,
         capture_output=True,
         text=True,
         check=False,
