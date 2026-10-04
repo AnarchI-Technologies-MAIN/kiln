@@ -29,6 +29,10 @@ from engine.mutation_executor import (
     mutation_source_files,
     discover_python_mutations,
 )
+from engine.isolation_boundary import (
+    warn_insufficient_isolation,
+    sanitize_environment,
+)
 
 
 JAVASCRIPT_EXTENSIONS = {
@@ -479,6 +483,9 @@ def run_wsl2_tests(
     entry: str,
     timeout_seconds: float,
 ):
+    # Emit security warning about insufficient isolation
+    warn_insufficient_isolation("WSL2 shell test execution")
+    
     normalize_wsl2_shell_sources(
         specimen
     )
@@ -591,6 +598,9 @@ def run_api_service_tests(
     entry: str,
     timeout_seconds: float,
 ):
+    # Emit security warning about insufficient isolation
+    warn_insufficient_isolation("API service test execution")
+    
     target = validated_entry(
         specimen,
         entry,
@@ -606,8 +616,10 @@ def run_api_service_tests(
 
         port = probe.getsockname()[1]
 
-    environment = dict(
-        os.environ
+    # Sanitize environment to filter sensitive credentials
+    # Note: This is defense-in-depth, NOT a security boundary
+    environment = sanitize_environment(
+        preserve_keys={"KILN_HOST", "KILN_PORT"}
     )
 
     environment["KILN_HOST"] = (
@@ -748,6 +760,9 @@ def run_adapter_tests(
     entry: str,
     timeout_seconds: float = DEFAULT_TEST_TIMEOUT_SECONDS,
 ):
+    # Emit security warning about insufficient isolation
+    warn_insufficient_isolation(f"Adapter test execution ({adapter})")
+    
     specimen = Path(
         specimen
     ).resolve()
@@ -757,8 +772,10 @@ def run_adapter_tests(
             "test timeout must be positive"
         )
 
-    environment = dict(
-        os.environ
+    # Sanitize environment to filter sensitive credentials
+    # Note: This is defense-in-depth, NOT a security boundary
+    environment = sanitize_environment(
+        preserve_keys={"PYTHONPATH"}
     )
 
     environment["PYTHONPATH"] = str(
