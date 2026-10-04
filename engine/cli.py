@@ -17,7 +17,7 @@ from engine.environment_reconstruction import (
     reconstruct_wsl2,
 )
 from engine.target_intake import inspect_target
-from engine.frankentest import approve_frankentest, frankentest
+from engine.frankentest import approve_frankentest, frankentest, inspect_approved_candidate
 from engine.coal_contracts import resolve_coal_contract
 from engine.coal_tongs import (
     coal_capability_matrix,
@@ -321,6 +321,11 @@ def build_parser() -> argparse.ArgumentParser:
     approval.add_argument("--timeout", type=float, default=30)
     approval.add_argument("--approve", action="store_true")
     approval.add_argument("--json", action="store_true")
+
+    registry = commands.add_parser("frankentest-registry", help="Verify a complete approved test-candidate registry entry.")
+    registry.add_argument("registry", type=Path)
+    registry.add_argument("--candidate-id", required=True)
+    registry.add_argument("--json", action="store_true")
 
     contracts = commands.add_parser(
         "contracts",
@@ -790,6 +795,15 @@ def command_cycle(args):
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.command == "frankentest-registry":
+        try:
+            result = inspect_approved_candidate(args.registry, args.candidate_id)
+        except (RuntimeError, OSError, ValueError) as error:
+            emit({"disposition": "HELD", "reason": str(error)}, args.json)
+            return 12
+        emit(result, args.json)
+        return 0
 
     if args.command == "frankentest-approve":
         if not args.approve:

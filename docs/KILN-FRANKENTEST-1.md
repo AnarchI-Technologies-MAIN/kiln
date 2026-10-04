@@ -23,7 +23,9 @@ A candidate must pass ten fresh-specimen executions: in both normal and
 optimized Python, an unchanged positive baseline, each of two identified
 production-source mutation challenges, and each mutation with its corresponding
 segment removed. Fault challenges must fail an assertion; removal controls must
-pass. Errors, skips, zero tests, timeouts, unresolved mutations, test-only
+pass or explicitly retain another segment's detection. The designated segment
+must detect its predeclared fault; executed segment identities are checked
+against the parent's generated inventory. Errors, skips, zero tests, timeouts, unresolved mutations, test-only
 mutations, build failures and failed cleanup do not qualify a candidate.
 
 Target-declared environment variables and rebuild commands are retained.
@@ -46,6 +48,14 @@ It verifies candidate/source/proof/commit bindings and independently reruns all
 recursive checks before creating an immutable APPROVED_SYSTEM_WIDE_TEST_CANDIDATE
 registry entry. Approval never silently installs the candidate, rewrites Brain
 contracts, closes numbered gates, activates a host or changes adjacent products.
+
+The candidate identity also binds the composer source, interpreter bytes/version
+and coal execution-profile digest. Registry entries contain the exact generated
+source and complete qualification snapshot. A complete fsynced receipt is linked
+create-only as the admission marker. A directory without that marker is pending;
+competing approvals produce a conflict rather than an overwrite. Registry
+inspection rejects partial entries, content drift and inconsistent snapshots.
+These guarantees do not claim host-loss recovery or full filesystem crash durability.
 
 The repair loop remains: preserve fracture evidence, rewind disposable specimens,
 repair an isolated successor, re-establish the positive baseline, increase the

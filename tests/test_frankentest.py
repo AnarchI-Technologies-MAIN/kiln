@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from engine.cli import main
 from engine.cycle_orchestrator import run_cycle
-from engine.frankentest import approve_frankentest, compose_source, digest, execute_candidate, frankentest, proven_segments, read_json
+from engine.frankentest import approve_frankentest, compose_source, digest, execute_candidate, frankentest, inspect_approved_candidate, proven_segments, read_json
 from engine.coal_contracts import resolve_coal_contract
 from tests.test_coal_contracts import coal_payload
 
@@ -63,8 +63,25 @@ class FrankentestTests(unittest.TestCase):
         self.assertEqual(receipt['disposition'], 'APPROVED_SYSTEM_WIDE_TEST_CANDIDATE')
         self.assertFalse(receipt['installed_into_library'])
         self.assertTrue(Path(receipt['requalification_report']).is_file())
+        self.assertEqual(inspect_approved_candidate(self.root / 'registry', candidate['candidate_id']), receipt)
+        code = self.root / 'registry' / candidate['candidate_id'] / 'test_frankentest.py'
+        code.write_text('pass\n', encoding='utf-8')
+        with self.assertRaisesRegex(RuntimeError, 'REGISTRY_CONTENT_DRIFT'):
+            inspect_approved_candidate(self.root / 'registry', candidate['candidate_id'])
         with self.assertRaisesRegex(RuntimeError, 'APPROVAL_CANDIDATE_PIN'):
             approve_frankentest(self.repo, path, self.evidence, '0' * 64, 'unit-test-authority', self.root / 'bad-registry')
+
+    def test_partial_registry_entry_is_not_admitted(self):
+        identifier = 'KILN-FRANKENTEST-' + '0' * 20
+        directory = self.root / 'partial-registry' / identifier
+        directory.mkdir(parents=True)
+        (directory / 'test_frankentest.py').write_text('pass\n', encoding='utf-8')
+        with self.assertRaises(OSError):
+            inspect_approved_candidate(directory.parent, identifier)
+
+    def test_registry_path_escape_is_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, 'REGISTRY_CANDIDATE_ID'):
+            inspect_approved_candidate(self.root, '../escape')
 
     def test_import_errors_are_not_assertion_fractures(self):
         repository = self.root / 'broken-execution'
@@ -132,6 +149,20 @@ class FrankentestTests(unittest.TestCase):
     def test_duplicate_segment_is_rejected(self):
         with self.assertRaisesRegex(RuntimeError, 'DUPLICATE_SEGMENT'):
             compose_source(self.repo, [self.segments[0], self.segments[0]])
+
+    def test_noncanonical_root_is_resolved_before_containment(self):
+        segments = proven_segments(self.repo / '..' / 'target', self.aggregate)
+        self.assertEqual(segments, self.segments)
+
+    def test_broken_setup_control_is_inconclusive(self):
+        code, parent = compose_source(self.repo, self.segments, omit=0)
+        # A removal experiment that fails setup cannot earn necessity evidence.
+        code = code.replace('class AppTests(unittest.TestCase):', "class AppTests(unittest.TestCase):\n    def setUp(self):\n        raise RuntimeError('missing setup dependency')")
+        repository = self.root / 'setup-error-control'
+        repository.mkdir()
+        (repository/'app.py').write_text((self.repo/'app.py').read_text(), encoding='utf-8')
+        execution = execute_candidate(repository, 'candidate.py', code, resolve_coal_contract('python', self.repo), 5, False)
+        self.assertEqual(execution['classification'], 'EXECUTION_FAILED')
 
     def test_cross_module_context_is_held(self):
         altered = copy.deepcopy(self.segments)
