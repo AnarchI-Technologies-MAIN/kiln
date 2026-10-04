@@ -63,11 +63,21 @@ class FrankentestTests(unittest.TestCase):
         self.assertEqual(receipt['disposition'], 'APPROVED_SYSTEM_WIDE_TEST_CANDIDATE')
         self.assertFalse(receipt['installed_into_library'])
         self.assertTrue(Path(receipt['requalification_report']).is_file())
-        self.assertEqual(inspect_approved_candidate(self.root / 'registry', candidate['candidate_id']), receipt)
+        self.assertEqual(inspect_approved_candidate(self.root / 'registry', candidate['candidate_id'], receipt['approval_sha256']), receipt)
+        directory = self.root / 'registry' / candidate['candidate_id']
+        self.assertFalse((directory / '.approval.pending.json').exists())
+        approval = directory / 'approval.json'
+        original_receipt = approval.read_bytes()
+        altered_receipt = json.loads(original_receipt)
+        altered_receipt['authority_ref'] = 'substituted-authority'
+        approval.write_text(json.dumps(altered_receipt), encoding='utf-8')
+        with self.assertRaisesRegex(RuntimeError, 'REGISTRY_APPROVAL_DRIFT'):
+            inspect_approved_candidate(directory.parent, candidate['candidate_id'], receipt['approval_sha256'])
+        approval.write_bytes(original_receipt)
         code = self.root / 'registry' / candidate['candidate_id'] / 'test_frankentest.py'
         code.write_text('pass\n', encoding='utf-8')
         with self.assertRaisesRegex(RuntimeError, 'REGISTRY_CONTENT_DRIFT'):
-            inspect_approved_candidate(self.root / 'registry', candidate['candidate_id'])
+            inspect_approved_candidate(self.root / 'registry', candidate['candidate_id'], receipt['approval_sha256'])
         with self.assertRaisesRegex(RuntimeError, 'APPROVAL_CANDIDATE_PIN'):
             approve_frankentest(self.repo, path, self.evidence, '0' * 64, 'unit-test-authority', self.root / 'bad-registry')
 
@@ -77,11 +87,11 @@ class FrankentestTests(unittest.TestCase):
         directory.mkdir(parents=True)
         (directory / 'test_frankentest.py').write_text('pass\n', encoding='utf-8')
         with self.assertRaises(OSError):
-            inspect_approved_candidate(directory.parent, identifier)
+            inspect_approved_candidate(directory.parent, identifier, '0' * 64)
 
     def test_registry_path_escape_is_rejected(self):
         with self.assertRaisesRegex(RuntimeError, 'REGISTRY_CANDIDATE_ID'):
-            inspect_approved_candidate(self.root, '../escape')
+            inspect_approved_candidate(self.root, '../escape', '0' * 64)
 
     def test_import_errors_are_not_assertion_fractures(self):
         repository = self.root / 'broken-execution'

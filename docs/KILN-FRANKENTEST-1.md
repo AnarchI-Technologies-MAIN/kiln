@@ -45,14 +45,18 @@ not an atomic writer lock or a claim that every runtime dependency was pinned.
 
 Explicit approval requires an authority reference and expected candidate SHA256.
 It verifies candidate/source/proof/commit bindings and independently reruns all
-recursive checks before creating an immutable APPROVED_SYSTEM_WIDE_TEST_CANDIDATE
+recursive checks before creating a create-only, tamper-evident APPROVED_SYSTEM_WIDE_TEST_CANDIDATE
 registry entry. Approval never silently installs the candidate, rewrites Brain
 contracts, closes numbered gates, activates a host or changes adjacent products.
 
 The candidate identity also binds the composer source, interpreter bytes/version
 and coal execution-profile digest. Registry entries contain the exact generated
 source and complete qualification snapshot. A complete fsynced receipt is linked
-create-only as the admission marker. A directory without that marker is pending;
+create-only as the admission marker. The receipt is serialized once and its digest
+returned for independent custody. Inspection requires the expected receipt digest
+and rejects any authority-reference change. The temporary hard-link alias is
+removed. This is tamper evidence under trusted-local custody, not immutable storage.
+A directory without that marker is pending;
 competing approvals produce a conflict rather than an overwrite. Registry
 inspection rejects partial entries, content drift and inconsistent snapshots.
 These guarantees do not claim host-loss recovery or full filesystem crash durability.

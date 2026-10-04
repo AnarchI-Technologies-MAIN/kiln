@@ -341,7 +341,7 @@ def frankentest(target, evidence, output, adapter='auto', max_candidates=8, time
 def approve_frankentest(target, candidate_path, evidence, expected_sha256, authority_ref, registry, timeout=30):
     """Explicit, pinned approval with fresh recursive requalification.
 
-    Creates a new immutable registry entry; does not rewrite a test library,
+    Creates a create-only, tamper-evident entry; does not rewrite a test library,
     deploy code, grant Brain authority, or approve future candidates.
     """
     require(isinstance(authority_ref, str) and authority_ref.strip(), 'APPROVAL_AUTHORITY_REQUIRED')
@@ -377,19 +377,25 @@ def approve_frankentest(target, candidate_path, evidence, expected_sha256, autho
     # A directory without this receipt is pending, never admitted. A competing
     # approval cannot overwrite an existing entry; it receives an explicit conflict.
     pending = destination / '.approval.pending.json'
-    with pending.open('x', encoding='utf-8') as handle:
-        json.dump(receipt, handle, indent=2, sort_keys=True)
+    approval_raw = json.dumps(receipt, sort_keys=True, separators=(',', ':'), ensure_ascii=True).encode('utf-8')
+    approval_sha256 = digest(approval_raw)
+    with pending.open('xb') as handle:
+        handle.write(approval_raw)
         handle.flush()
         os.fsync(handle.fileno())
     os.link(pending, destination / 'approval.json')
-    inspect_approved_candidate(registry, candidate['candidate_id'])
-    return receipt
+    pending.unlink()
+    return inspect_approved_candidate(registry, candidate['candidate_id'], approval_sha256)
 
 
-def inspect_approved_candidate(registry, candidate_id):
+def inspect_approved_candidate(registry, candidate_id, expected_approval_sha256):
     require(re.fullmatch(r'KILN-FRANKENTEST-[0-9A-F]{20}', candidate_id) is not None, 'REGISTRY_CANDIDATE_ID')
+    require(isinstance(expected_approval_sha256, str) and re.fullmatch(r'[0-9a-f]{64}', expected_approval_sha256) is not None, 'REGISTRY_APPROVAL_PIN_REQUIRED')
     directory = Path(registry).resolve() / candidate_id
-    receipt = read_json(directory / 'approval.json')
+    approval_path = directory / 'approval.json'
+    approval_raw = approval_path.read_bytes()
+    require(digest(approval_raw) == expected_approval_sha256, 'REGISTRY_APPROVAL_DRIFT')
+    receipt = read_json(approval_path, approval_raw)
     require(receipt.get('schema') == 'kiln.frankentest-approval.v1' and receipt.get('candidate_id') == candidate_id and receipt.get('disposition') == 'APPROVED_SYSTEM_WIDE_TEST_CANDIDATE', 'REGISTRY_APPROVAL_INVALID')
     bindings = {'candidate.json': receipt['candidate_sha256'], 'test_frankentest.py': receipt['source_sha256'], 'qualification-report.json': receipt['requalification_sha256']}
     for name, expected in bindings.items():
@@ -398,4 +404,4 @@ def inspect_approved_candidate(registry, candidate_id):
     require(report.get('original_preserved') is True and report.get('execution_profile_preserved') is True and report.get('disposition') == 'QUALIFIED_APPROVAL_CANDIDATES', 'REGISTRY_QUALIFICATION_INVALID')
     selected = [c for c in report['candidates'] if c['candidate_id'] == candidate_id]
     require(len(selected) == 1 and selected[0]['source_sha256'] == receipt['source_sha256'] and selected[0]['source_commit'] == receipt['source_commit'] and selected[0]['proof_sha256'] == receipt['proof_sha256'] and selected[0]['execution_profile'] == receipt['execution_profile'], 'REGISTRY_SNAPSHOT_CONTRADICTION')
-    return receipt
+    return dict(receipt, approval_sha256=expected_approval_sha256)

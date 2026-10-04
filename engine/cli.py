@@ -325,6 +325,7 @@ def build_parser() -> argparse.ArgumentParser:
     registry = commands.add_parser("frankentest-registry", help="Verify a complete approved test-candidate registry entry.")
     registry.add_argument("registry", type=Path)
     registry.add_argument("--candidate-id", required=True)
+    registry.add_argument("--expected-approval-sha256", required=True)
     registry.add_argument("--json", action="store_true")
 
     contracts = commands.add_parser(
@@ -798,7 +799,7 @@ def main(argv=None):
 
     if args.command == "frankentest-registry":
         try:
-            result = inspect_approved_candidate(args.registry, args.candidate_id)
+            result = inspect_approved_candidate(args.registry, args.candidate_id, args.expected_approval_sha256)
         except (RuntimeError, OSError, ValueError) as error:
             emit({"disposition": "HELD", "reason": str(error)}, args.json)
             return 12
