@@ -19,7 +19,7 @@ on:
       kiln_ref:
         description: Trusted Kiln runtime commit, tag, or branch.
         required: false
-        default: 55362ad3599e8825937ce462ac0a934f1494cb10
+        default: 3f94b88fc69e0660e9dc07e9ee223f37fa1182f1
         type: string
       max_passes:
         description: Maximum bounded mutation passes.
