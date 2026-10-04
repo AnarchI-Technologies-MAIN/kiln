@@ -147,7 +147,9 @@ class FrankentestTests(unittest.TestCase):
     def test_requalification_selects_exact_fragment_mutation_pairs(self):
         repository = self.root/'multi-proof-target'
         subprocess.run(['git','clone','-q',str(self.repo),str(repository)],check=True,capture_output=True)
-        (repository/'app.py').write_text('def enabled():\n    return True and True\n\ndef closed():\n    return False\n',encoding='utf-8')
+        # The alphabetically first fragment has two proofs: its duplicate pair
+        # must not spend the budget before a compatible composition is reached.
+        (repository/'app.py').write_text('def enabled():\n    return True\n\ndef closed():\n    return False or False\n',encoding='utf-8')
         subprocess.run(['git','-C',str(repository),'add','.'],check=True,capture_output=True)
         subprocess.run(['git','-C',str(repository),'-c','user.name=Kiln Fixture','-c','user.email=fixture@example.invalid','commit','-qm','two proofs for one fragment'],check=True,capture_output=True)
         cycle=run_cycle(str(repository),'python','tests',3,'stable',self.root/'multi-proof-cycles')

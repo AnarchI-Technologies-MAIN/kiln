@@ -274,6 +274,10 @@ def frankentest(target, evidence, output, adapter='auto', max_candidates=8, time
     passes = 0
     try:
         for pair in itertools.combinations(segments, 2):
+            # Repeated proof of one segment is useful evidence, not a composition.
+            # Do not consume the generation budget on duplicate/linked segments.
+            if pair[0]['contract']['fragment_id'] == pair[1]['contract']['fragment_id'] or pair[0]['mutation_id'] == pair[1]['mutation_id']:
+                continue
             if len(report['candidates']) + len(report['held_combinations']) >= max_candidates:
                 break
             try:
