@@ -27,4 +27,4 @@ jobs:
       - name: Install exact checked-out source
         run: python -m pip install .
       - name: Qualify composer and declared environment under optimized Python
-        run: python -O -B -m unittest tests.test_frankentest tests.test_adaptive_coal
+        run: python -O -B -m pytest tests/test_frankentest.py tests/test_adaptive_coal.py
