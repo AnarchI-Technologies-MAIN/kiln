@@ -27,7 +27,7 @@ from engine.mutation_executor import apply_mutation
 from engine.proof_metadata import validate_proof_metadata_payload
 from engine.sandbox_execution import SandboxExecutor
 from engine.target_intake import inspect_target
-from engine.isolation_boundary import sanitize_environment
+from engine.isolation_boundary import repository_path_is_absolute, sanitize_environment
 
 SCHEMA = 'kiln.frankentest-candidate.v1'
 MAX_EVIDENCE_BYTES = 8 * 1024 * 1024
@@ -50,7 +50,7 @@ def contained(root, name):
     root = Path(root).resolve()
     require(isinstance(name, str) and name and '\\' not in name, 'NONCANONICAL_PATH')
     relative = Path(name)
-    require(not relative.is_absolute() and '..' not in relative.parts, 'PATH_ESCAPE')
+    require(not repository_path_is_absolute(name) and '..' not in relative.parts, 'PATH_ESCAPE')
     path = (root / relative).resolve()
     require(path.is_relative_to(root), 'PATH_ESCAPE')
     return path
@@ -70,6 +70,7 @@ def read_json(path, raw=None):
 
 
 def proven_segments(root, aggregate):
+    require(isinstance(aggregate, dict), 'PROOF_AGGREGATE_SCHEMA')
     require(aggregate.get('schema') == 'kiln.proof-metadata-aggregate.v1', 'PROOF_AGGREGATE_SCHEMA')
     require(aggregate.get('proof_evidence_version') == 'KILN-PROOF-EVIDENCE-3', 'PROOF_AGGREGATE_VERSION')
     trials = aggregate.get('trials')
@@ -77,6 +78,7 @@ def proven_segments(root, aggregate):
     segments = []
     seen_trials = set()
     for trial in trials:
+        require(isinstance(trial, dict) and 'mutation_id' in trial and 'metadata' in trial, 'PROOF_TRIAL_SCHEMA')
         mutation_id = trial['mutation_id']
         require(mutation_id not in seen_trials, 'DUPLICATE_PROOF_TRIAL')
         seen_trials.add(mutation_id)
@@ -223,6 +225,8 @@ def execute_candidate(repository, relative, code, contract, timeout, optimized):
     if len(markers) != 1:
         return {'classification': 'EXECUTION_FAILED', 'processes': outputs}
     outcome = json.loads(markers[0])
+    if not isinstance(outcome, dict):
+        return {'classification': 'EXECUTION_FAILED', 'processes': outputs}
     expected_nodes = [n.value for n in ast.walk(ast.parse(code)) if isinstance(n, ast.keyword) and n.arg == 'expected_segment_ids']
     parent_expected = ast.literal_eval(expected_nodes[0]) if len(expected_nodes) == 1 else None
     valid = outcome.get('tests') == 1 and all(outcome.get(k) == 0 for k in ('errors', 'skipped', 'expected_failures', 'unexpected_successes'))

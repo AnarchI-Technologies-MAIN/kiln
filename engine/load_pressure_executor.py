@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from engine.isolation_boundary import repository_path_is_absolute
 import csv
 import os
 import shutil
@@ -38,7 +39,7 @@ def validate_repository_path(repository_path: str, worktree: Path) -> None:
     Raises RuntimeError if the path is absolute or escapes the worktree.
     """
     # Reject absolute paths
-    if Path(repository_path).is_absolute():
+    if repository_path_is_absolute(repository_path):
         raise RuntimeError(
             f"repository_path must be relative, got absolute path: {repository_path}"
         )

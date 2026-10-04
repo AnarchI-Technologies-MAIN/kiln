@@ -15,10 +15,18 @@ from engine.isolation_boundary import (
     sanitize_environment,
     validate_execution_path,
     warn_insufficient_isolation,
+    repository_path_is_absolute,
 )
 
 
 class IsolationBoundaryTests(unittest.TestCase):
+
+    def test_anchored_paths_are_rejected_on_both_platforms(self):
+        for value in ('/etc/passwd', 'C:/Windows/system.ini', 'C:relative.py', '\\rooted.py', '\\\\server\\share\\file.py'):
+            with self.subTest(value=value):
+                self.assertTrue(repository_path_is_absolute(value))
+        for value in ('tests/app.py', './tests/app.py'):
+            self.assertFalse(repository_path_is_absolute(value))
 
     def test_sanitize_environment_filters_sensitive_keys(self):
         """Test that sensitive environment variables are filtered."""

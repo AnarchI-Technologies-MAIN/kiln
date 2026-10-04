@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from engine.isolation_boundary import repository_path_is_absolute
 from typing import Dict, List, Tuple
 import csv
 import subprocess
@@ -52,7 +53,7 @@ def inspect_plan(plan: dict) -> LivePreflightResult:
     repository_path_str = plan["repository_path"]
     
     # Reject absolute paths
-    if Path(repository_path_str).is_absolute():
+    if repository_path_is_absolute(repository_path_str):
         blockers.append("TEST_PATH_ABSOLUTE")
     
     # Build the test path and resolve it to check containment
