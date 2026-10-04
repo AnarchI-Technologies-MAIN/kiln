@@ -46,6 +46,11 @@ on:
         required: false
         default: 30
         type: number
+      specimen_ref:
+        description: Exact caller commit to prove; defaults to the event SHA.
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -63,7 +68,7 @@ jobs:
           fetch-depth: 0
           path: specimen
           persist-credentials: false
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.specimen_ref || github.sha }}
 
       - name: Checkout pinned Kiln runtime
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -100,6 +105,7 @@ jobs:
         env:
           KILN_NATIVE_TEST_RESULT: ${{ inputs.native_test_result }}
           KILN_REQUESTED_REF: ${{ inputs.kiln_ref }}
+          KILN_SPECIMEN_REF: ${{ inputs.specimen_ref || github.sha }}
         run: |
           set -euo pipefail
 
@@ -111,6 +117,7 @@ jobs:
             echo "repository=$GITHUB_REPOSITORY"
             echo "ref=$GITHUB_REF"
             echo "sha=$GITHUB_SHA"
+            echo "specimen_requested_ref=$KILN_SPECIMEN_REF"
             echo "run_id=$GITHUB_RUN_ID"
             echo "run_attempt=$GITHUB_RUN_ATTEMPT"
             echo "native_test_result=$KILN_NATIVE_TEST_RESULT"

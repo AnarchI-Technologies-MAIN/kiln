@@ -27,6 +27,9 @@ from engine.cycle_orchestrator import (
     finalize_cycle_result,
     run_cycle,
 )
+from engine.github_adjudication import (
+    publish_github_adjudication,
+)
 from engine.synthetic_contracts import (
     CapabilityGap,
     SyntheticContract,
@@ -85,8 +88,13 @@ class RedesignSummary:
 class PromotionSummary:
     candidate_id: str
     promotion_authorized: bool
+    branch_name: str
     pushed: bool
     remote_verified: bool
+    human_adjudication_required: bool
+    draft_pr_url: str
+    draft_pr_created: bool
+    cycle_reignited: bool
     commit_hash: str
     remote_commit: str
     disposition: str
@@ -505,6 +513,8 @@ def promote_artifact(
     approved: bool,
     baseline_preserved: bool,
     fracture_mitigated: bool,
+    base_branch: str,
+    repository: str,
 ) -> PromotionSummary:
     identity = inspect_target(
         target
@@ -547,14 +557,20 @@ def promote_artifact(
         destination_path,
         expected_head,
         approved,
+        branch_name,
     )
 
     if not preflight.promotion_authorized:
         return PromotionSummary(
             candidate_id=artifact.candidate_id,
             promotion_authorized=False,
+            branch_name=branch_name,
             pushed=False,
             remote_verified=False,
+            human_adjudication_required=True,
+            draft_pr_url="",
+            draft_pr_created=False,
+            cycle_reignited=False,
             commit_hash="",
             remote_commit="",
             disposition=preflight.disposition,
@@ -569,12 +585,57 @@ def promote_artifact(
         commit_message,
     )
 
+    publication = None
+
+    if result.remote_verified:
+        publication = publish_github_adjudication(
+            target_repo=target_repo,
+            remote_name=remote_name,
+            branch_name=result.branch_name,
+            base_branch=base_branch,
+            commit_hash=result.commit_hash,
+            title=commit_message,
+            body=(
+                "Kiln staged a proven improvement for human "
+                "adjudication.\n\n"
+                f"Candidate: `{result.candidate_id}`\n\n"
+                f"Provenance: `{provenance_ref}`\n\n"
+                "This draft cannot be merged until a human marks "
+                "it ready and adjudicates the proposed source mutation."
+            ),
+            repository=repository,
+        )
+
+    disposition = result.disposition
+
+    if publication is not None:
+        disposition = publication.disposition
+
     return PromotionSummary(
         candidate_id=result.candidate_id,
         promotion_authorized=True,
+        branch_name=result.branch_name,
         pushed=result.pushed,
         remote_verified=result.remote_verified,
+        human_adjudication_required=(
+            result.human_adjudication_required
+        ),
+        draft_pr_url=(
+            publication.draft_pr_url
+            if publication is not None
+            else ""
+        ),
+        draft_pr_created=(
+            publication.draft_pr_created
+            if publication is not None
+            else False
+        ),
+        cycle_reignited=(
+            publication.cycle_reignited
+            if publication is not None
+            else False
+        ),
         commit_hash=result.commit_hash,
         remote_commit=result.remote_commit,
-        disposition=result.disposition,
+        disposition=disposition,
     )
