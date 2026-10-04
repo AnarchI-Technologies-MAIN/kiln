@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
-      - name: Install exact checked-out source
-        run: python -m pip install .
+      - name: Install exact checked-out source and test dependencies
+        run: python -m pip install ".[test]"
       - name: Qualify composer and declared environment under optimized Python
         run: python -O -B -m pytest tests/test_frankentest.py tests/test_adaptive_coal.py
