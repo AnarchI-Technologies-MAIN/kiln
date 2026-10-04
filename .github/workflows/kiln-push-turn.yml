@@ -72,7 +72,7 @@ jobs:
       adapter: python
       entry: tests
       native_test_result: ${{ needs.native-tests.result }}
-      kiln_ref: 3f94b88fc69e0660e9dc07e9ee223f37fa1182f1
+      kiln_ref: 6c776a9526d442fa87d440edd1677e4c65da1cbe
       max_passes: 8
       workers: 1
       until: stable
