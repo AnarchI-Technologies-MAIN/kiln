@@ -213,7 +213,8 @@ def execute_candidate(repository, relative, code, contract, timeout, optimized):
     command = [sys.executable, '-I', '-B']
     if optimized:
         command.append('-O')
-    command += ['-c', "import sys,runpy;sys.path.insert(0,'.');runpy.run_path(sys.argv[1],run_name='__main__')", relative]
+    bootstrap = "import sys,runpy,pathlib;sys.path.insert(0,'.');p=pathlib.Path(sys.argv[1]);parts=p.parent.parts;packaged=bool(parts) and all(x.isidentifier() and pathlib.Path(*parts[:i+1],'__init__.py').is_file() for i,x in enumerate(parts));runpy.run_module('.'.join(p.with_suffix('').parts),run_name='__main__',alter_sys=True) if packaged else runpy.run_path(sys.argv[1],run_name='__main__')"
+    command += ['-c', bootstrap, relative]
     commands.append(command)
     outputs = []
     for index, cmd in enumerate(commands):
@@ -243,7 +244,7 @@ def execute_candidate(repository, relative, code, contract, timeout, optimized):
     return {'classification': classification, 'result': outcome, 'processes': outputs}
 
 
-def frankentest(target, evidence, output, adapter='auto', max_candidates=8, timeout=30, selected_fragments=None):
+def frankentest(target, evidence, output, adapter='auto', max_candidates=8, timeout=30, selected_pairs=None):
     require(type(max_candidates) is int and 1 <= max_candidates <= 64, 'CANDIDATE_BUDGET')
     require(isinstance(timeout, (int, float)) and math.isfinite(timeout) and 0 < timeout <= 300, 'TIME_BUDGET')
     identity = inspect_target(str(target))
@@ -261,10 +262,10 @@ def frankentest(target, evidence, output, adapter='auto', max_candidates=8, time
     evidence_raw = evidence.read_bytes()
     aggregate = read_json(evidence, evidence_raw)
     segments = proven_segments(root, aggregate)
-    if selected_fragments is not None:
-        require(len(selected_fragments) == 2 and len(set(selected_fragments)) == 2, 'SELECTED_FRAGMENT_COUNT')
-        segments = [s for s in segments if s['contract']['fragment_id'] in selected_fragments]
-        require({s['contract']['fragment_id'] for s in segments} == set(selected_fragments), 'SELECTED_FRAGMENT_NOT_PROVEN')
+    if selected_pairs is not None:
+        require(len(selected_pairs) == 2 and len(set(selected_pairs)) == 2, 'SELECTED_PAIR_COUNT')
+        segments = [s for s in segments if (s['contract']['fragment_id'],s['mutation_id']) in selected_pairs]
+        require(len(segments) == 2 and {(s['contract']['fragment_id'],s['mutation_id']) for s in segments} == set(selected_pairs), 'SELECTED_PAIR_NOT_PROVEN')
     require(len(segments) >= 2, 'INSUFFICIENT_PROVEN_SEGMENTS')
     inventory = {c.mutation_id: c for c in discover_mutations(adapter, root)}
     output.mkdir(parents=True)
@@ -286,7 +287,7 @@ def frankentest(target, evidence, output, adapter='auto', max_candidates=8, time
             except RuntimeError as error:
                 report['held_combinations'].append({'fragments': [s['contract']['fragment_id'] for s in pair], 'reason': str(error)})
                 continue
-            candidate_id = 'KILN-FRANKENTEST-' + digest(json.dumps({'code': code, 'fragments': [s['contract']['fragment_id'] for s in pair], 'head': identity.source_commit, 'execution_profile': profile}, sort_keys=True).encode())[:20].upper()
+            candidate_id = 'KILN-FRANKENTEST-' + digest(json.dumps({'code': code, 'segment_mutation_pairs': [(s['contract']['contract_id'],s['contract']['fragment_id'],s['mutation_id']) for s in pair], 'head': identity.source_commit, 'execution_profile': profile}, sort_keys=True).encode())[:20].upper()
             candidate = {'schema': SCHEMA, 'candidate_id': candidate_id, 'source_sha256': digest(code.encode()), 'source_commit': identity.source_commit, 'proof_sha256': digest(evidence_raw), 'execution_profile': profile, 'adapter': adapter, 'parent_source': parent, 'segments': pair, 'qualification': [], 'disposition': 'UNQUALIFIED', 'system_wide_approved': False}
             candidate_dir = output / candidate_id
             candidate_dir.mkdir()
@@ -359,9 +360,9 @@ def approve_frankentest(target, candidate_path, evidence, expected_sha256, autho
     registry = Path(registry).resolve()
     require(not registry.is_relative_to(Path(identity.repository_root).resolve()), 'REGISTRY_MUST_BE_OUTSIDE_TARGET')
     registry.mkdir(parents=True, exist_ok=True)
-    fragments = [s['contract']['fragment_id'] for s in candidate['segments']]
+    pairs = [(s['contract']['fragment_id'],s['mutation_id']) for s in candidate['segments']]
     run_root = registry / ('requalification-' + uuid.uuid4().hex)
-    result = frankentest(target, evidence, run_root, candidate['adapter'], 1, timeout, selected_fragments=fragments)
+    result = frankentest(target, evidence, run_root, candidate['adapter'], 1, timeout, selected_pairs=pairs)
     require(result['disposition'] == 'QUALIFIED_APPROVAL_CANDIDATES', 'APPROVAL_REQUALIFICATION_FAILED')
     fresh = result['candidates'][0]
     require(fresh['candidate_id'] == candidate['candidate_id'] and fresh['source_sha256'] == candidate['source_sha256'], 'APPROVAL_RECONSTRUCTION_DRIFT')

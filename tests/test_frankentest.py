@@ -144,6 +144,36 @@ class FrankentestTests(unittest.TestCase):
         self.assertEqual(result['disposition'], 'HELD')
         self.assertEqual(result['candidates'][0]['disposition'], 'QUALIFICATION_FAILED')
 
+    def test_requalification_selects_exact_fragment_mutation_pairs(self):
+        repository = self.root/'multi-proof-target'
+        subprocess.run(['git','clone','-q',str(self.repo),str(repository)],check=True,capture_output=True)
+        (repository/'app.py').write_text('def enabled():\n    return True and True\n\ndef closed():\n    return False\n',encoding='utf-8')
+        subprocess.run(['git','-C',str(repository),'add','.'],check=True,capture_output=True)
+        subprocess.run(['git','-C',str(repository),'-c','user.name=Kiln Fixture','-c','user.email=fixture@example.invalid','commit','-qm','two proofs for one fragment'],check=True,capture_output=True)
+        cycle=run_cycle(str(repository),'python','tests',3,'stable',self.root/'multi-proof-cycles')
+        self.assertEqual(cycle.fractures_observed,3)
+        result=frankentest(repository,Path(cycle.proof_metadata_path),self.root/'multi-proof-candidates',adapter='python',max_candidates=2)
+        self.assertEqual(len(result['candidates']),2)
+        self.assertNotEqual(result['candidates'][0]['candidate_id'],result['candidates'][1]['candidate_id'])
+        selected=result['candidates'][1]
+        path=self.root/'multi-proof-candidates'/selected['candidate_id']/'candidate.json'
+        receipt=approve_frankentest(repository,path,Path(cycle.proof_metadata_path),digest(path.read_bytes()),'unit-test-authority',self.root/'multi-proof-registry')
+        self.assertEqual(receipt['candidate_id'],selected['candidate_id'])
+
+    def test_package_relative_import_context_is_preserved(self):
+        repository=self.root/'package-target'
+        subprocess.run(['git','clone','-q',str(self.repo),str(repository)],check=True,capture_output=True)
+        (repository/'tests/__init__.py').write_text('',encoding='utf-8')
+        (repository/'tests/helpers.py').write_text('from app import enabled, closed\n',encoding='utf-8')
+        path=repository/'tests/test_app.py'
+        path.write_text(path.read_text().replace('from app import enabled, closed','from .helpers import enabled, closed'),encoding='utf-8')
+        subprocess.run(['git','-C',str(repository),'add','.'],check=True,capture_output=True)
+        subprocess.run(['git','-C',str(repository),'-c','user.name=Kiln Fixture','-c','user.email=fixture@example.invalid','commit','-qm','package relative imports'],check=True,capture_output=True)
+        cycle=run_cycle(str(repository),'python','tests/test_app.py',2,'stable',self.root/'package-cycles')
+        self.assertEqual(cycle.fractures_observed,2)
+        result=frankentest(repository,Path(cycle.proof_metadata_path),self.root/'package-candidates',adapter='python',max_candidates=1)
+        self.assertEqual(result['disposition'],'QUALIFIED_APPROVAL_CANDIDATES',result)
+
     def test_metadata_tampering_is_rejected(self):
         altered = copy.deepcopy(self.aggregate)
         altered['trials'][0]['metadata']['fragment_contracts'][0]['source_text'] = 'self.assertTrue(True)'
