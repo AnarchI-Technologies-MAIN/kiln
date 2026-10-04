@@ -17,6 +17,7 @@ from engine.environment_reconstruction import (
     reconstruct_wsl2,
 )
 from engine.target_intake import inspect_target
+from engine.frankentest import approve_frankentest, frankentest, inspect_approved_candidate
 from engine.coal_contracts import resolve_coal_contract
 from engine.coal_tongs import (
     coal_capability_matrix,
@@ -296,6 +297,36 @@ def build_parser() -> argparse.ArgumentParser:
     fragments.add_argument("target")
     fragments.add_argument("--source", required=True)
     fragments.add_argument("--json", action="store_true")
+
+    franken = commands.add_parser(
+        "frankentest",
+        help="Compose source-bound proven segments and qualify new test candidates.",
+    )
+    franken.add_argument("target")
+    franken.add_argument("--evidence", type=Path, required=True)
+    franken.add_argument("--output", type=Path, required=True)
+    franken.add_argument("--adapter", default="auto")
+    franken.add_argument("--max-candidates", type=int, default=8)
+    franken.add_argument("--timeout", type=float, default=30)
+    franken.add_argument("--destructive", action="store_true")
+    franken.add_argument("--json", action="store_true")
+
+    approval = commands.add_parser("frankentest-approve", help="Pin, requalify and explicitly approve a shared test candidate.")
+    approval.add_argument("target")
+    approval.add_argument("--candidate", type=Path, required=True)
+    approval.add_argument("--evidence", type=Path, required=True)
+    approval.add_argument("--expected-sha256", required=True)
+    approval.add_argument("--authority-ref", required=True)
+    approval.add_argument("--registry", type=Path, required=True)
+    approval.add_argument("--timeout", type=float, default=30)
+    approval.add_argument("--approve", action="store_true")
+    approval.add_argument("--json", action="store_true")
+
+    registry = commands.add_parser("frankentest-registry", help="Verify a complete approved test-candidate registry entry.")
+    registry.add_argument("registry", type=Path)
+    registry.add_argument("--candidate-id", required=True)
+    registry.add_argument("--expected-approval-sha256", required=True)
+    registry.add_argument("--json", action="store_true")
 
     contracts = commands.add_parser(
         "contracts",
@@ -765,6 +796,42 @@ def command_cycle(args):
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.command == "frankentest-registry":
+        try:
+            result = inspect_approved_candidate(args.registry, args.candidate_id, args.expected_approval_sha256)
+        except (RuntimeError, OSError, ValueError) as error:
+            emit({"disposition": "HELD", "reason": str(error)}, args.json)
+            return 12
+        emit(result, args.json)
+        return 0
+
+    if args.command == "frankentest-approve":
+        if not args.approve:
+            emit({"disposition": "EXPLICIT_APPROVAL_REQUIRED"}, args.json)
+            return 5
+        try:
+            result = approve_frankentest(args.target, args.candidate, args.evidence,
+                                        args.expected_sha256, args.authority_ref,
+                                        args.registry, args.timeout)
+        except (RuntimeError, OSError, ValueError) as error:
+            emit({"disposition": "HELD", "reason": str(error)}, args.json)
+            return 12
+        emit(result, args.json)
+        return 0
+
+    if args.command == "frankentest":
+        if not args.destructive:
+            emit({"disposition": "DESTRUCTIVE_AUTHORIZATION_REQUIRED"}, args.json)
+            return 5
+        try:
+            result = frankentest(args.target, args.evidence, args.output, args.adapter,
+                                 args.max_candidates, args.timeout)
+        except (RuntimeError, OSError, ValueError) as error:
+            emit({"disposition": "HELD", "reason": str(error)}, args.json)
+            return 12
+        emit(result, args.json)
+        return 0 if result['disposition'] == 'QUALIFIED_APPROVAL_CANDIDATES' else 12
 
     if args.command == "version":
         return command_version(args)

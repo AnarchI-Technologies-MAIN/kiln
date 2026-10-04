@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "anarchi-kiln"
-version = "0.1.3"
+version = "0.1.4"
 description = "Deterministic destructive software testing, reconstruction, fracture analysis, and constructive redesign."
 readme = "README.md"
 requires-python = ">=3.12"

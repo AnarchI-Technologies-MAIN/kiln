@@ -18,7 +18,7 @@ such as containers (Docker, Podman), VMs, or mandatory access control systems.
 
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Dict
 import os
 import warnings
@@ -31,6 +31,11 @@ class IsolationBoundaryWarning(UserWarning):
     """Warning about insufficient isolation boundaries."""
 
     pass
+
+
+def repository_path_is_absolute(value: str) -> bool:
+    """Reject anchored paths from either platform, including drive-relative paths."""
+    return bool(PurePosixPath(value).anchor or PureWindowsPath(value).anchor)
 
 
 def warn_insufficient_isolation(context: str) -> None:
