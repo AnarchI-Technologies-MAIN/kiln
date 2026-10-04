@@ -47,7 +47,26 @@ def git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
 def inspect_plan(plan: dict) -> LivePreflightResult:
     blockers = []
     repo = Path(plan["repository_root"]).resolve()
-    test = repo / plan["repository_path"]
+    
+    # Validate repository_path to prevent path traversal attacks
+    repository_path_str = plan["repository_path"]
+    
+    # Reject absolute paths
+    if Path(repository_path_str).is_absolute():
+        blockers.append("TEST_PATH_ABSOLUTE")
+    
+    # Build the test path and resolve it to check containment
+    test = repo / repository_path_str
+    
+    # Resolve both paths and verify the test path is contained within repo
+    try:
+        test_resolved = test.resolve()
+        # Check if the resolved test path is relative to the repository root
+        test_resolved.relative_to(repo)
+    except (ValueError, OSError):
+        # relative_to raises ValueError if test_resolved is not relative to repo
+        # OSError can occur with invalid paths
+        blockers.append("TEST_PATH_ESCAPES_REPOSITORY")
 
     git_repository = False
     source_commit = ""

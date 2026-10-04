@@ -31,7 +31,50 @@ def git(repo, *args):
     )
 
 
-def runner_command(runner, repository_path):
+def validate_repository_path(repository_path: str, worktree: Path) -> None:
+    """
+    Validate that repository_path is safe and contained within the worktree.
+    
+    Raises RuntimeError if the path is absolute or escapes the worktree.
+    """
+    # Reject absolute paths
+    if Path(repository_path).is_absolute():
+        raise RuntimeError(
+            f"repository_path must be relative, got absolute path: {repository_path}"
+        )
+    
+    # Normalize path separators
+    normalized = repository_path.replace("\\", "/")
+    target = Path(normalized)
+    
+    # Resolve the full path and verify containment
+    full_path = (worktree / target).resolve()
+    worktree_resolved = worktree.resolve()
+    
+    try:
+        # Verify the resolved path is relative to the worktree
+        full_path.relative_to(worktree_resolved)
+    except ValueError:
+        raise RuntimeError(
+            f"repository_path escapes worktree boundary: {repository_path}"
+        )
+
+
+def runner_command(runner, repository_path, worktree):
+    """
+    Build the test runner command.
+    
+    Args:
+        runner: The test runner to use (pytest, python-unittest, etc.)
+        repository_path: The relative path to the test file within the repository
+        worktree: The worktree root path for validation
+    
+    Returns:
+        List of command arguments for subprocess execution
+    """
+    # Validate path safety before building command
+    validate_repository_path(repository_path, worktree)
+    
     normalized = repository_path.replace("\\", "/")
     target = Path(normalized)
 
@@ -112,7 +155,7 @@ def execute_level(plan, preflight, contract, level, session_root):
     if add.returncode != 0:
         raise RuntimeError(f"worktree creation failed: {add.stderr.strip()}")
 
-    command = runner_command(plan["runner"], plan["repository_path"])
+    command = runner_command(plan["runner"], plan["repository_path"], worktree)
     passed = 0
     worktree_removed = False
 
