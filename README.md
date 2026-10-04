@@ -58,6 +58,15 @@ deadline inside disposable specimens. See
 `docs/KILN-COAL-CONTRACT-1.md`, the canonical JSON Schema under `schemas/`,
 and the copyable Rust example under `docs/examples/`.
 
+Use `--adapter auto` to select the target repository's validated
+`kiln.coal.json` without knowing its adapter name in advance. The declared
+rebuild commands, test command, environment, and proof parser remain unchanged.
+This mode requires an explicit target contract: missing or malformed declarations
+do not silently fall back to a generic runner or inferred workflow commands.
+Inspect selection with `kiln coal TARGET --adapter auto --json`, establish an
+isolated baseline, then authorize a bounded specimen-only cycle separately.
+Explicit adapter names retain their existing behavior.
+
 The packaged coal house currently includes Python/unittest plus Rust/Cargo, Go,
 Java/Maven, .NET, Ruby/Bundler, PHP/Composer, C/CMake, C++/CMake,
 Kotlin/Gradle, Swift/SwiftPM, Dart, Lua, R, Elixir/Mix, Haskell/Cabal, and

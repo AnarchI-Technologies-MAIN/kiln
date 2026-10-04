@@ -873,6 +873,11 @@ def resolve_coal_contract(
     adapter: str,
     root: Path,
 ) -> CoalContract | None:
+    # Adaptive selection uses only the target's validated declaration.
+    # Missing declarations must not silently select a generic test environment.
+    if adapter == "auto":
+        return repository_coal_contract(root)
+
     builtins = builtin_coal_contracts()
 
     if adapter in builtins:
