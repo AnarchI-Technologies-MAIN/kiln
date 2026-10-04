@@ -55,12 +55,12 @@ def coal_payload(
             "driver": "command",
             "rebuildCommands": [
                 [
-                    "python3",
+                    python_executable,
                     "build.py",
                 ]
             ],
             "testCommand": [
-                "python3",
+                python_executable,
                 "test.py",
             ],
             "entryKind": "opaque",
@@ -314,16 +314,17 @@ class CoalContractTests(unittest.TestCase):
             payload["execution"]["rebuildCommands"] = []
             payload["execution"]["testCommand"] = [
                 sys.executable,
-                "-c",
-                (
-                    "from pathlib import Path;"
-                    "value=Path('engine.nova').read_text();"
-                    "ok='check(yes)' in value;"
-                    "print('CASE keeps the engine enabled') if not ok else None;"
-                    "print('FAIL engine.nova:1') if not ok else None;"
-                    "raise SystemExit(0 if ok else 1)"
-                ),
+                "verify_fixture.py",
             ]
+            (repo / "verify_fixture.py").write_text(
+                "from pathlib import Path\n"
+                "value=Path('engine.nova').read_text()\n"
+                "ok='check(yes)' in value\n"
+                "print('CASE keeps the engine enabled') if not ok else None\n"
+                "print('FAIL engine.nova:1') if not ok else None\n"
+                "raise SystemExit(0 if ok else 1)\n",
+                encoding="utf-8",
+            )
             (repo / "kiln.coal.json").write_text(
                 json.dumps(payload, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",

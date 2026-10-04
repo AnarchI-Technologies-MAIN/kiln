@@ -25,6 +25,7 @@ from engine.mutation_executor import apply_mutation
 from engine.proof_metadata import validate_proof_metadata_payload
 from engine.sandbox_execution import SandboxExecutor
 from engine.target_intake import inspect_target
+from engine.isolation_boundary import sanitize_environment
 
 SCHEMA = 'kiln.frankentest-candidate.v1'
 MAX_EVIDENCE_BYTES = 8 * 1024 * 1024
@@ -183,7 +184,7 @@ def execute_candidate(repository, relative, code, contract, timeout, optimized):
     path = contained(repository, relative)
     require(not path.exists(), 'GENERATED_PATH_ALREADY_EXISTS')
     path.write_text(code, encoding='utf-8', newline='\n')
-    environment = dict(os.environ)
+    environment = sanitize_environment()
     environment.update({key: value.replace('{specimen}', str(repository)).replace('{entry}', relative) for key, value in contract.execution.environment})
     environment['PYTHONDONTWRITEBYTECODE'] = '1'
     deadline = time.monotonic() + timeout

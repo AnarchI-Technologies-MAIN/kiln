@@ -13,6 +13,8 @@ from tests.test_coal_contracts import coal_payload
 class AdaptiveCoalTests(unittest.TestCase):
     def write_contract(self, root, payload):
         (root / "kiln.coal.json").write_text(json.dumps(payload), encoding="utf-8")
+        (root / "build.py").write_text("from pathlib import Path\nPath('rebuilt.marker').write_text('ready')\n", encoding="utf-8")
+        (root / "test.py").write_text("from pathlib import Path\nraise SystemExit(0 if Path('rebuilt.marker').read_text() == 'ready' else 1)\n", encoding="utf-8")
 
     def test_auto_selects_exact_declared_environment(self):
         with tempfile.TemporaryDirectory() as temp:

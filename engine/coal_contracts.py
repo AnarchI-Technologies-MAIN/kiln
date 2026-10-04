@@ -42,27 +42,38 @@ _FORBIDDEN_SUBCOMMANDS = {
 # These are common build/test tools that are considered safe when used
 # without shell/interpreter wrapper flags
 _EXTERNAL_ALLOWED_EXECUTABLES = {
+    "rscript",
+    "bundle",
+    "cabal",
     "cargo",
     "cmake",
+    "composer",
+    "ctest",
+    "dart",
     "dotnet",
     "gcc",
     "go",
     "gradle",
     "javac",
     "make",
+    "lua",
     "maven",
     "mvn",
+    "mix",
     "node",
     "npm",
     "npx",
     "pnpm",
+    "php",
     "pytest",
     "python",
     "python2",
     "python3",
     "ruby",
     "rustc",
+    "swift",
     "yarn",
+    "zig",
 }
 
 # Shell executables that can execute arbitrary code via wrapper flags
@@ -453,20 +464,15 @@ def _validate_command_authority(
 
     # Additional validation for external contracts
     if external:
+        if executable in _SHELL_EXECUTABLES:
+            raise RuntimeError(
+                "coal command uses a shell executable that can bypass validation: "
+                + field + " (executable: " + executable + ")"
+            )
         # Enforce allowlist: only permit known safe executables
         if executable not in _EXTERNAL_ALLOWED_EXECUTABLES:
             raise RuntimeError(
                 "coal command uses a non-allowlisted executable for external contracts: "
-                + field
-                + " (executable: "
-                + executable
-                + ")"
-            )
-
-        # Block shell executables entirely (they are inherently dangerous)
-        if executable in _SHELL_EXECUTABLES:
-            raise RuntimeError(
-                "coal command uses a shell executable that can bypass validation: "
                 + field
                 + " (executable: "
                 + executable
