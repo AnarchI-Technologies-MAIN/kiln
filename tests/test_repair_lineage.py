@@ -1,10 +1,21 @@
 import subprocess
 import tempfile
 import unittest
+import hashlib
+import json
+import zipfile
+from dataclasses import replace
 from pathlib import Path
 
 from engine.mutation_executor import discover_python_mutations
-from engine.repair_lineage import RepairSpec, repair_and_replay, repair_under_same_oracle, verify_checkpoint
+from engine.repair_lineage import (
+    Checkpoint,
+    RepairSpec,
+    _restore_snapshot,
+    repair_and_replay,
+    repair_under_same_oracle,
+    verify_checkpoint,
+)
 
 
 class RepairLineageTests(unittest.TestCase):
@@ -114,11 +125,49 @@ class RepairLineageTests(unittest.TestCase):
             subprocess.run(["git", "add", "."], cwd=root, check=True)
             subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
             candidate = next(c for c in discover_python_mutations(root) if c.original_token == "==")
-            from dataclasses import replace
             with self.assertRaisesRegex(RuntimeError, "mutation token no longer matches"):
                 repair_and_replay(root, replace(candidate, original_token="!="), ["python", "-c", "import runpy; assert runpy.run_path('gate.py')['enabled'](True) is True"], root.parent / (root.name + "-wrong"), {"repair_budget": 1})
             with self.assertRaisesRegex(RuntimeError, "exactly one"):
                 repair_and_replay(root, candidate, ["python", "-c", "import runpy; assert runpy.run_path('gate.py')['enabled'](True) is True"], root.parent / (root.name + "-budget"), {"repair_budget": 0})
+
+    def test_restore_rejects_archive_substitution_before_publish(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = root / "source"
+            source.mkdir()
+            (source / "gate.py").write_text("ok\n", encoding="utf-8")
+            archive = root / "snapshot.zip"
+            manifest = [{"path": "gate.py", "sha256": hashlib.sha256(b"ok\n").hexdigest()}]
+            with zipfile.ZipFile(archive, "w") as bundle:
+                file_info = zipfile.ZipInfo("gate.py")
+                file_info.external_attr = 0o100644 << 16
+                bundle.writestr(file_info, "tampered\n")
+                bundle.writestr(".kiln-manifest.json", json.dumps(manifest, sort_keys=True))
+            snapshot_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
+            checkpoint = Checkpoint(
+                "id", None, "source", "".join([]), "parameters", "BASELINE",
+                str(archive), snapshot_hash,
+            )
+            checkpoint = replace(checkpoint, specimen_hash=hashlib.sha256(json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()).hexdigest())
+            with self.assertRaisesRegex(RuntimeError, "extracted files do not match manifest"):
+                _restore_snapshot(checkpoint, root / "destination")
+            self.assertFalse((root / "destination").exists())
+
+    def test_restore_rejects_duplicate_archive_members(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            archive = root / "snapshot.zip"
+            manifest = [{"path": "gate.py", "sha256": hashlib.sha256(b"ok\n").hexdigest()}]
+            with zipfile.ZipFile(archive, "w") as bundle:
+                bundle.writestr("gate.py", "ok\n")
+                bundle.writestr("gate.py", "ok\n")
+                bundle.writestr(".kiln-manifest.json", json.dumps(manifest, sort_keys=True))
+            checkpoint = Checkpoint(
+                "id", None, "source", "x", "parameters", "BASELINE",
+                str(archive), hashlib.sha256(archive.read_bytes()).hexdigest(),
+            )
+            with self.assertRaisesRegex(RuntimeError, "duplicate members"):
+                _restore_snapshot(checkpoint, root / "destination")
 
 
 if __name__ == "__main__":

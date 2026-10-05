@@ -10,6 +10,11 @@ class ValidateKilnEvidenceTests(unittest.TestCase):
     sha = "a" * 40
 
     def write_result(self, root: Path, **overrides):
+        (root / "baseline-process.json").write_text(json.dumps({"returncode": 0}), encoding="utf-8")
+        (root / "trial-process-1.json").write_text(json.dumps({"returncode": 1}), encoding="utf-8")
+        (root / "trial-process-2.json").write_text(json.dumps({"returncode": 1}), encoding="utf-8")
+        (root / "trial-proof-1.json").write_text("{}", encoding="utf-8")
+        (root / "trial-proof-2.json").write_text("{}", encoding="utf-8")
         proof = root / "proof-metadata.json"
         proof.write_text(json.dumps({
             "schema": "kiln.proof-metadata-aggregate.v1",
@@ -18,15 +23,30 @@ class ValidateKilnEvidenceTests(unittest.TestCase):
                 {"pass_number": 1, "mutation_id": "m1", "metadata": {
                     "schema": "kiln.proof-metadata.v2",
                     "proof_metadata_version": "KILN-PROOF-METADATA-2",
+                    "detected_test_ids": ["test-1"], "invariant_refs": ["inv-1"],
+                    "behavioral_fragment_refs": ["frag-1"], "fragment_proof_links": [{"link_id": "link-1"}],
                 }},
                 {"pass_number": 2, "mutation_id": "m2", "metadata": {
                     "schema": "kiln.proof-metadata.v2",
                     "proof_metadata_version": "KILN-PROOF-METADATA-2",
+                    "detected_test_ids": ["test-2"], "invariant_refs": ["inv-2"],
+                    "behavioral_fragment_refs": ["frag-2"], "fragment_proof_links": [{"link_id": "link-2"}],
                 }},
             ],
         }) + "\n", encoding="utf-8")
         result = {
             "source_commit": self.sha,
+            "cycle_id": "cycle-1",
+            "adapter": "python",
+            "entry": "ci",
+            "baseline_sandbox_id": "baseline-1",
+            "baseline_evidence_path": "baseline-process.json",
+            "trials": [
+                {"pass_number": 1, "mutation_id": "m1", "sandbox_id": "sandbox-1", "test_exit_code": 1,
+                 "canonical_source_hash": "a" * 64, "test_evidence_path": "trial-process-1.json", "proof_metadata_path": "trial-proof-1.json"},
+                {"pass_number": 2, "mutation_id": "m2", "sandbox_id": "sandbox-2", "test_exit_code": 1,
+                 "canonical_source_hash": "b" * 64, "test_evidence_path": "trial-process-2.json", "proof_metadata_path": "trial-proof-2.json"},
+            ],
             "baseline_passed": True,
             "mutation_candidate_count": 1,
             "passes_requested": 2,

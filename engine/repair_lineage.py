@@ -62,6 +62,21 @@ def _manifest(specimen: Path) -> list[dict[str, str]]:
     return rows
 
 
+def _fsync_directory(directory: Path) -> None:
+    """Fsync a directory where the platform exposes directory descriptors."""
+    try:
+        directory_fd = os.open(directory, os.O_RDONLY)
+    except OSError:
+        # Windows does not expose fsync-able directory handles. File fsync and
+        # atomic replace still apply there; Linux runners get the directory
+        # durability barrier required for crash-safe publication.
+        return
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
 def _snapshot(specimen: Path, archive: Path) -> tuple[str, str]:
     manifest = _manifest(specimen)
     archive.parent.mkdir(parents=True, exist_ok=True)
@@ -70,12 +85,16 @@ def _snapshot(specimen: Path, archive: Path) -> tuple[str, str]:
         for row in manifest:
             bundle.write(Path(specimen) / row["path"], row["path"])
         bundle.writestr(".kiln-manifest.json", json.dumps(manifest, sort_keys=True))
-    os.replace(temporary, archive)
-    directory_fd = os.open(archive.parent, os.O_RDONLY)
+    # The archive bytes must reach stable storage before the directory entry is
+    # published.  A directory fsync alone does not make a newly-created ZIP
+    # durable across an interrupted publication.
+    archive_fd = os.open(temporary, os.O_RDWR)
     try:
-        os.fsync(directory_fd)
+        os.fsync(archive_fd)
     finally:
-        os.close(directory_fd)
+        os.close(archive_fd)
+    os.replace(temporary, archive)
+    _fsync_directory(archive.parent)
     return _digest(manifest), hashlib.sha256(archive.read_bytes()).hexdigest()
 
 
@@ -91,6 +110,9 @@ def _restore_snapshot(checkpoint: Checkpoint, destination: Path) -> str:
     temporary.mkdir(parents=True)
     try:
         with zipfile.ZipFile(archive) as bundle:
+            names = [member.filename for member in bundle.infolist()]
+            if len(names) != len(set(names)):
+                raise RuntimeError("checkpoint archive contains duplicate members")
             for member in bundle.infolist():
                 member_path = Path(member.filename)
                 if member.filename.startswith("/") or ".." in member_path.parts:
@@ -100,14 +122,27 @@ def _restore_snapshot(checkpoint: Checkpoint, destination: Path) -> str:
                 if member.filename != ".kiln-manifest.json" and (member.external_attr >> 16) & 0o170000 != 0o100000:
                     raise RuntimeError("checkpoint archive contains a non-regular member")
             bundle.extractall(temporary)
-        if _digest(json.loads((temporary / ".kiln-manifest.json").read_text(encoding="utf-8"))) != checkpoint.specimen_hash:
-            raise RuntimeError("checkpoint manifest does not match identity")
-        os.replace(temporary, destination)
-        directory_fd = os.open(destination.parent, os.O_RDONLY)
+        manifest_path = temporary / ".kiln-manifest.json"
         try:
-            os.fsync(directory_fd)
-        finally:
-            os.close(directory_fd)
+            embedded_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RuntimeError("checkpoint manifest is malformed") from exc
+        if embedded_manifest != sorted(embedded_manifest, key=lambda row: row.get("path", "")):
+            raise RuntimeError("checkpoint manifest is not canonical")
+        manifest_names = [row.get("path") for row in embedded_manifest]
+        if any(not isinstance(name, str) for name in manifest_names) or len(manifest_names) != len(set(manifest_names)):
+            raise RuntimeError("checkpoint manifest contains duplicate or invalid paths")
+        archive_file_names = sorted(
+            name for name in names if name != ".kiln-manifest.json"
+        )
+        if archive_file_names != sorted(manifest_names):
+            raise RuntimeError("checkpoint archive members do not match manifest")
+        if _digest(embedded_manifest) != checkpoint.specimen_hash:
+            raise RuntimeError("checkpoint manifest does not match identity")
+        if _manifest(temporary) != embedded_manifest:
+            raise RuntimeError("checkpoint extracted files do not match manifest")
+        os.replace(temporary, destination)
+        _fsync_directory(destination.parent)
     except Exception:
         shutil.rmtree(temporary, ignore_errors=True)
         raise
@@ -140,11 +175,7 @@ def _checkpoint(path: Path, specimen: Path, *, parent: str | None, source_hash: 
         handle.flush()
         os.fsync(handle.fileno())
     os.replace(temporary, path)
-    directory_fd = os.open(path.parent, os.O_RDONLY)
-    try:
-        os.fsync(directory_fd)
-    finally:
-        os.close(directory_fd)
+    _fsync_directory(path.parent)
     return result
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 
@@ -35,6 +36,12 @@ def validate(evidence_root: Path, expected_source_commit: str, requested_passes:
         "original_head_preserved",
         "disposition",
         "proof_metadata_path",
+        "cycle_id",
+        "adapter",
+        "entry",
+        "baseline_sandbox_id",
+        "baseline_evidence_path",
+        "trials",
     }
     missing = sorted(required - result.keys())
     if missing:
@@ -42,6 +49,10 @@ def validate(evidence_root: Path, expected_source_commit: str, requested_passes:
 
     if result["source_commit"] != expected_source_commit:
         raise ValueError("cycle result is bound to a different source commit")
+    if not isinstance(expected_source_commit, str) or re.fullmatch(r"[0-9a-f]{40}", expected_source_commit) is None:
+        raise ValueError("source commit is not a full lowercase SHA")
+    if not all(isinstance(result.get(field), str) and result[field] for field in ("cycle_id", "adapter", "entry", "baseline_sandbox_id", "baseline_evidence_path")):
+        raise ValueError("cycle identity is incomplete")
     if result["baseline_passed"] is not True:
         raise ValueError("baseline did not pass")
     if result["mutation_candidate_count"] < 1:
@@ -60,6 +71,42 @@ def validate(evidence_root: Path, expected_source_commit: str, requested_passes:
         raise ValueError(f"non-completed disposition: {result['disposition']}")
 
     evidence_root = evidence_root.resolve()
+    def evidence_file(raw, label):
+        if not isinstance(raw, str) or not raw or Path(raw).is_absolute() or ".." in Path(raw).parts:
+            raise ValueError(f"{label} path is invalid")
+        path = (evidence_root / raw).resolve()
+        if not path.is_relative_to(evidence_root) or not path.is_file() or path.stat().st_size == 0:
+            raise ValueError(f"missing or empty {label}")
+        return path
+
+    baseline_evidence = evidence_file(result["baseline_evidence_path"], "baseline evidence")
+    try:
+        baseline_process = json.loads(baseline_evidence.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("baseline process evidence is not valid JSON") from exc
+    if not isinstance(baseline_process, dict) or baseline_process.get("returncode") != 0:
+        raise ValueError("baseline process identity is invalid")
+
+    result_trials = result["trials"]
+    if not isinstance(result_trials, list) or len(result_trials) != result["passes_executed"]:
+        raise ValueError("cycle trial count does not match execution")
+    trial_by_pass = {}
+    for trial in result_trials:
+        if not isinstance(trial, dict) or not isinstance(trial.get("pass_number"), int):
+            raise ValueError("cycle result contains an invalid trial")
+        if trial["pass_number"] in trial_by_pass:
+            raise ValueError("cycle result contains duplicate trial identities")
+        for field in ("mutation_id", "sandbox_id", "test_evidence_path", "proof_metadata_path", "canonical_source_hash"):
+            if not isinstance(trial.get(field), str) or not trial[field]:
+                raise ValueError("cycle trial identity is incomplete")
+        evidence_file(trial["test_evidence_path"], "trial process evidence")
+        evidence_file(trial["proof_metadata_path"], "trial proof metadata")
+        trial_by_pass[trial["pass_number"]] = trial
+    if sorted(trial_by_pass) != list(range(1, result["passes_executed"] + 1)):
+        raise ValueError("cycle trial pass sequence is inconsistent")
+    if len({trial["mutation_id"] for trial in result_trials}) != len(result_trials) or len({trial["sandbox_id"] for trial in result_trials}) != len(result_trials):
+        raise ValueError("cycle trial identities are duplicated")
+
     proof_path = Path(result["proof_metadata_path"]).resolve()
     if not proof_path.is_relative_to(evidence_root):
         raise ValueError("proof metadata path escaped evidence root")
@@ -86,6 +133,18 @@ def validate(evidence_root: Path, expected_source_commit: str, requested_passes:
         metadata = trial["metadata"]
         if metadata.get("schema") != "kiln.proof-metadata.v2" or metadata.get("proof_metadata_version") != "KILN-PROOF-METADATA-2":
             raise ValueError("proof metadata trial uses an invalid metadata contract")
+        executed = trial_by_pass.get(trial["pass_number"])
+        if executed is None or executed["mutation_id"] != trial["mutation_id"]:
+            raise ValueError("proof metadata trial is not bound to executed trial")
+        if not metadata.get("detected_test_ids") or not metadata.get("invariant_refs") or not metadata.get("behavioral_fragment_refs") or not metadata.get("fragment_proof_links"):
+            raise ValueError("proof metadata trial is empty or incomplete")
+        process_path = evidence_file(executed["test_evidence_path"], "trial process evidence")
+        try:
+            process = json.loads(process_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError("trial process evidence is not valid JSON") from exc
+        if not isinstance(process, dict) or process.get("returncode") != executed.get("test_exit_code"):
+            raise ValueError("trial process identity does not match executed result")
         pass_numbers.append(trial["pass_number"])
         mutation_ids.append(trial["mutation_id"])
     if pass_numbers != list(range(1, len(trials) + 1)):
