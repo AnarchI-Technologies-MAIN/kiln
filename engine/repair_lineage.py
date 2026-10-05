@@ -140,8 +140,11 @@ def _checkpoint(path: Path, specimen: Path, *, parent: str | None, source_hash: 
         handle.flush()
         os.fsync(handle.fileno())
     os.replace(temporary, path)
-    with path.parent.open(".", "r") as directory:
-        os.fsync(directory.fileno())
+    directory_fd = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
     return result
 
 
