@@ -47,7 +47,6 @@ jobs:
           SOURCE_REPOSITORY: ${{ inputs.source_repository }}
           AUTHORIZATION_ACTOR: ${{ inputs.authorization_actor }}
           AUTHORIZATION_METHOD: ${{ inputs.authorization_method }}
-          EXPECTED_KILN_REF: a4c304acb5f3ffbd005d8515928b04ebdb261d1c
           INPUT_KILN_REF: ${{ inputs.kiln_ref }}
           CALLER_ACTOR: ${{ github.actor }}
         run: |
@@ -56,7 +55,7 @@ jobs:
           test "$AUTHORIZATION_ACTOR" = "alexander-gudde"
           test "$AUTHORIZATION_METHOD" = "owner_exact_sha_dispatch"
           test "$CALLER_ACTOR" = "$AUTHORIZATION_ACTOR"
-          test "$INPUT_KILN_REF" = "$EXPECTED_KILN_REF"
+          test "$INPUT_KILN_REF" =~ ^[0-9a-f]{40}$
 
       - name: Checkout exact first-party source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -93,6 +92,14 @@ jobs:
           fetch-depth: 1
           path: kiln-runtime
           persist-credentials: false
+
+      - name: Verify pinned Kiln runtime identity
+        working-directory: kiln-runtime
+        env:
+          KILN_REF: ${{ inputs.kiln_ref }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$KILN_REF"
 
       - name: Run bounded exact-source Kiln campaign
         run: |
