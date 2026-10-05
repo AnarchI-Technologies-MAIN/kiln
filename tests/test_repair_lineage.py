@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from engine.mutation_executor import discover_python_mutations
-from repair_lineage import repair_and_replay
+from repair_lineage import repair_and_replay, verify_checkpoint
 
 
 class RepairLineageTests(unittest.TestCase):
@@ -34,7 +34,7 @@ class RepairLineageTests(unittest.TestCase):
                 candidate,
                 ["python", "-m", "unittest", "discover", "-s", "tests"],
                 root.parent / (root.name + "-checkpoints"),
-                {"candidate_id": candidate.mutation_id, "oracle": "unittest:tests", "budget": 1},
+                {"candidate_id": candidate.mutation_id, "oracle": "unittest:tests", "repair_budget": 1},
             )
             self.assertEqual(repaired.parent_checkpoint_id, baseline.checkpoint_id)
             self.assertEqual(baseline.phase, "BASELINE")
@@ -49,6 +49,32 @@ class RepairLineageTests(unittest.TestCase):
             from repair_lineage import _checkpoint
             with self.assertRaisesRegex(RuntimeError, "already exists"):
                 _checkpoint(path, parent=None, source_hash="a", specimen_hash="b", parameters={}, phase="BASELINE")
+
+    def test_malformed_and_stale_checkpoints_are_rejected(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "checkpoint.json"
+            path.write_text("not-json", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "malformed"):
+                verify_checkpoint(path)
+            path.write_text('{"checkpoint_id":"x","parent_checkpoint_id":null,"source_hash":"a","specimen_hash":"b","parameters_hash":"c","phase":"BASELINE"}', encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "stale"):
+                verify_checkpoint(path, {"repair_budget": 1})
+
+    def test_wrong_repair_and_budget_exhaustion_fail_closed(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "gate.py").write_text("def enabled(value):\n    return value == True\n", encoding="utf-8")
+            (root / "tests").mkdir()
+            (root / "tests" / "test_gate.py").write_text("import unittest\nfrom gate import enabled\nclass GateTest(unittest.TestCase):\n    def test_enabled(self): self.assertTrue(enabled(True))\n", encoding="utf-8")
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
+            candidate = discover_python_mutations(root)[0]
+            from dataclasses import replace
+            with self.assertRaisesRegex(RuntimeError, "mutation token no longer matches"):
+                repair_and_replay(root, replace(candidate, original_token="!="), ["python", "-m", "unittest", "discover", "-s", "tests"], root.parent / (root.name + "-wrong"), {"repair_budget": 1})
+            with self.assertRaisesRegex(RuntimeError, "exactly one"):
+                repair_and_replay(root, candidate, ["python", "-m", "unittest", "discover", "-s", "tests"], root.parent / (root.name + "-budget"), {"repair_budget": 0})
 
 
 if __name__ == "__main__":
