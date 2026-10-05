@@ -107,12 +107,15 @@ jobs:
           test -z "$(git status --porcelain)"
 
       - name: Publish sanitized summary
+        env:
+          CYCLE_RESULT: ${{ runner.temp }}/kiln-cycle-result.json
         run: |
           set -euo pipefail
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
-          result = json.loads(Path("$RUNNER_TEMP/kiln-cycle-result.json").read_text())
+          result = json.loads(Path(os.environ["CYCLE_RESULT"]).read_text())
           allowed = {
               key: result.get(key)
               for key in (
