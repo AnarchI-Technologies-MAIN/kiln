@@ -71,8 +71,11 @@ def _snapshot(specimen: Path, archive: Path) -> tuple[str, str]:
             bundle.write(Path(specimen) / row["path"], row["path"])
         bundle.writestr(".kiln-manifest.json", json.dumps(manifest, sort_keys=True))
     os.replace(temporary, archive)
-    with archive.parent.open(".", "r") as directory:
-        os.fsync(directory.fileno())
+    directory_fd = os.open(archive.parent, os.O_RDONLY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
     return _digest(manifest), hashlib.sha256(archive.read_bytes()).hexdigest()
 
 
@@ -100,8 +103,11 @@ def _restore_snapshot(checkpoint: Checkpoint, destination: Path) -> str:
         if _digest(json.loads((temporary / ".kiln-manifest.json").read_text(encoding="utf-8"))) != checkpoint.specimen_hash:
             raise RuntimeError("checkpoint manifest does not match identity")
         os.replace(temporary, destination)
-        with destination.parent.open(".", "r") as directory:
-            os.fsync(directory.fileno())
+        directory_fd = os.open(destination.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
     except Exception:
         shutil.rmtree(temporary, ignore_errors=True)
         raise
