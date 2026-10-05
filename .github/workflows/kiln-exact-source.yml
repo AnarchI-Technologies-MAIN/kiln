@@ -94,7 +94,7 @@ jobs:
           set -euo pipefail
           python -m venv "$RUNNER_TEMP/kiln-venv"
           "$RUNNER_TEMP/kiln-venv/bin/python" -m pip install --disable-pip-version-check jsonschema==4.26.0
-          "$RUNNER_TEMP/kiln-venv/bin/python" kiln-runtime/ci/run_bounded_cycle.py             --target "$GITHUB_WORKSPACE/specimen"             --adapter python --entry ci             --max-passes ${{ inputs.max_passes }}             --workers 1 --until ${{ inputs.until }}             --session-root "$RUNNER_TEMP/kiln-session"             --output "$RUNNER_TEMP/kiln-cycle-result.json"
+          "$RUNNER_TEMP/kiln-venv/bin/python" kiln-runtime/ci/run_bounded_cycle.py             --target "$GITHUB_WORKSPACE/specimen"             --adapter python --entry ci             --max-passes ${{ inputs.max_passes }}             --workers 1 --until ${{ inputs.until }}             --session-root "$RUNNER_TEMP/kiln-session"             --output "$RUNNER_TEMP/kiln-session/cycle-result.json"
           "$RUNNER_TEMP/kiln-venv/bin/python" kiln-runtime/ci/validate_kiln_evidence.py             --evidence-root "$RUNNER_TEMP/kiln-session"             --expected-source-commit "${{ inputs.source_head_sha }}"             --requested-passes "${{ inputs.max_passes }}"
 
       - name: Recheck source preservation
@@ -108,7 +108,7 @@ jobs:
 
       - name: Publish sanitized summary
         env:
-          CYCLE_RESULT: ${{ runner.temp }}/kiln-cycle-result.json
+          CYCLE_RESULT: ${{ runner.temp }}/kiln-session/cycle-result.json
         run: |
           set -euo pipefail
           python - <<'PY'
