@@ -5,7 +5,9 @@ import argparse
 import json
 from dataclasses import asdict
 from pathlib import Path
+import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from engine.cycle_orchestrator import finalize_cycle_result, run_cycle
 
 
@@ -37,7 +39,7 @@ def main() -> int:
         encoding="utf-8",
     )
     print(json.dumps(asdict(finalized), sort_keys=True, default=str))
-    return 0 if finalized.disposition in {"CYCLE_COMPLETE", "FRACTURE_EVIDENCE_PRODUCED"} else 1
+    return 0 if finalized.disposition in {"CYCLE_COMPLETE", "FRACTURE_EVIDENCE_PRODUCED", "BOUNDED_STABILITY_OBSERVED"} else 1
 
 
 if __name__ == "__main__":
