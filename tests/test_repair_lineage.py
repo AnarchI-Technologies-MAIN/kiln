@@ -19,6 +19,8 @@ class RepairLineageTests(unittest.TestCase):
             encoding="utf-8",
         )
         subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+        subprocess.run(["git", "config", "user.email", "e2e@example.invalid"], cwd=root, check=True)
+        subprocess.run(["git", "config", "user.name", "Kiln E2E"], cwd=root, check=True)
         subprocess.run(["git", "add", "."], cwd=root, check=True)
         subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
 
@@ -42,7 +44,7 @@ class RepairLineageTests(unittest.TestCase):
             subprocess.run(["git", "config", "user.name", "Kiln E2E"], cwd=root, check=True)
             subprocess.run(["git", "add", "."], cwd=root, check=True)
             subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
-            candidate = discover_python_mutations(root)[0]
+            candidate = next(c for c in discover_python_mutations(root) if c.original_token == "==")
             baseline, repaired = repair_and_replay(
                 root,
                 candidate,
@@ -60,7 +62,7 @@ class RepairLineageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "baseline.json"
             path.write_text("tampered\n", encoding="utf-8")
-            from repair_lineage import _checkpoint
+            from engine.repair_lineage import _checkpoint
             with self.assertRaisesRegex(RuntimeError, "already exists"):
                 _checkpoint(path, Path(raw), parent=None, source_hash="a", specimen_hash="b", parameters={}, phase="BASELINE")
 
@@ -107,9 +109,11 @@ class RepairLineageTests(unittest.TestCase):
             (root / "tests").mkdir()
             (root / "tests" / "test_gate.py").write_text("import unittest\nfrom gate import enabled\nclass GateTest(unittest.TestCase):\n    def test_enabled(self): self.assertTrue(enabled(True))\n", encoding="utf-8")
             subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.email", "e2e@example.invalid"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "Kiln E2E"], cwd=root, check=True)
             subprocess.run(["git", "add", "."], cwd=root, check=True)
             subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
-            candidate = discover_python_mutations(root)[0]
+            candidate = next(c for c in discover_python_mutations(root) if c.original_token == "==")
             from dataclasses import replace
             with self.assertRaisesRegex(RuntimeError, "mutation token no longer matches"):
                 repair_and_replay(root, replace(candidate, original_token="!="), ["python", "-m", "unittest", "discover", "-s", "tests"], root.parent / (root.name + "-wrong"), {"repair_budget": 1})
