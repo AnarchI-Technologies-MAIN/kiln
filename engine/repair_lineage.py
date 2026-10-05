@@ -54,6 +54,8 @@ def _manifest(specimen: Path) -> list[dict[str, str]]:
             continue
         if path.is_symlink():
             raise RuntimeError("bounded specimen rejects symlinks")
+        if path.is_dir():
+            continue
         if not path.is_file():
             raise RuntimeError("bounded specimen permits regular files only")
         rows.append({"path": path.relative_to(specimen).as_posix(), "sha256": file_hash(path)})
