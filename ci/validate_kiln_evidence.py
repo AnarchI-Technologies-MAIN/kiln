@@ -76,9 +76,22 @@ def validate(evidence_root: Path, expected_source_commit: str, requested_passes:
     trials = proof.get("trials")
     if not isinstance(trials, list) or len(trials) != result["passes_executed"]:
         raise ValueError("proof metadata trial count does not match execution")
+    pass_numbers = []
+    mutation_ids = []
     for trial in trials:
         if not isinstance(trial, dict) or not trial.get("mutation_id") or not isinstance(trial.get("metadata"), dict):
             raise ValueError("proof metadata contains an invalid trial")
+        if not isinstance(trial.get("pass_number"), int):
+            raise ValueError("proof metadata trial lacks a pass number")
+        metadata = trial["metadata"]
+        if metadata.get("schema") != "kiln.proof-metadata.v2" or metadata.get("proof_metadata_version") != "KILN-PROOF-METADATA-2":
+            raise ValueError("proof metadata trial uses an invalid metadata contract")
+        pass_numbers.append(trial["pass_number"])
+        mutation_ids.append(trial["mutation_id"])
+    if pass_numbers != list(range(1, len(trials) + 1)):
+        raise ValueError("proof metadata pass sequence is inconsistent")
+    if len(set(mutation_ids)) != len(mutation_ids):
+        raise ValueError("proof metadata mutation identities are duplicated")
 
     return {
         "qualified": True,
