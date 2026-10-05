@@ -110,6 +110,28 @@ jobs:
           "$RUNNER_TEMP/kiln-venv/bin/python" kiln-runtime/ci/run_bounded_cycle.py             --target "$GITHUB_WORKSPACE/specimen"             --adapter python --entry ci             --max-passes ${{ inputs.max_passes }}             --workers 1 --until ${{ inputs.until }}             --session-root "$RUNNER_TEMP/kiln-session"             --output "$RUNNER_TEMP/kiln-session/cycle-result.json"
           "$RUNNER_TEMP/kiln-venv/bin/python" kiln-runtime/ci/validate_kiln_evidence.py             --evidence-root "$RUNNER_TEMP/kiln-session"             --expected-source-commit "${{ inputs.source_head_sha }}"             --requested-passes "${{ inputs.max_passes }}"
 
+      - name: Write sanitized durable campaign receipt
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/kiln-venv/bin/python" kiln-runtime/ci/sanitized_receipt.py \
+            --result "$RUNNER_TEMP/kiln-session/cycle-result.json" \
+            --output "$RUNNER_TEMP/kiln-session/sanitized-receipt.json" \
+            --source-repository "${{ inputs.source_repository }}" \
+            --source-head-sha "${{ inputs.source_head_sha }}" \
+            --source-base-sha "${{ inputs.source_base_sha }}" \
+            --kiln-runtime-sha "${{ inputs.kiln_ref }}"
+
+      - name: Upload sanitized durable campaign receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kiln-sanitized-receipt-${{ inputs.pull_request_number }}-${{ inputs.source_head_sha }}
+          path: |
+            ${{ runner.temp }}/kiln-session/sanitized-receipt.json
+            ${{ runner.temp }}/kiln-session/sanitized-receipt.json.sha256
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Recheck source preservation
         working-directory: specimen
         env:
