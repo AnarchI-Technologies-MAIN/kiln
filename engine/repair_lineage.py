@@ -50,8 +50,12 @@ def _digest(payload: object) -> str:
 def _manifest(specimen: Path) -> list[dict[str, str]]:
     rows = []
     for path in sorted(Path(specimen).rglob("*")):
-        if not path.is_file() or ".git" in path.parts or path.name == ".kiln-manifest.json":
+        if ".git" in path.parts or path.name == ".kiln-manifest.json":
             continue
+        if path.is_symlink():
+            raise RuntimeError("bounded specimen rejects symlinks")
+        if not path.is_file():
+            raise RuntimeError("bounded specimen permits regular files only")
         rows.append({"path": path.relative_to(specimen).as_posix(), "sha256": file_hash(path)})
     return rows
 
@@ -65,6 +69,8 @@ def _snapshot(specimen: Path, archive: Path) -> tuple[str, str]:
             bundle.write(Path(specimen) / row["path"], row["path"])
         bundle.writestr(".kiln-manifest.json", json.dumps(manifest, sort_keys=True))
     os.replace(temporary, archive)
+    with archive.parent.open(".", "r") as directory:
+        os.fsync(directory.fileno())
     return _digest(manifest), hashlib.sha256(archive.read_bytes()).hexdigest()
 
 
@@ -74,9 +80,29 @@ def _restore_snapshot(checkpoint: Checkpoint, destination: Path) -> str:
         raise RuntimeError("checkpoint snapshot is missing or tampered")
     if destination.exists():
         raise RuntimeError("restore destination already exists")
-    destination.mkdir(parents=True)
-    with zipfile.ZipFile(archive) as bundle:
-        bundle.extractall(destination)
+    temporary = destination.with_name(destination.name + ".restore-tmp")
+    if temporary.exists():
+        raise RuntimeError("stale restore staging directory exists")
+    temporary.mkdir(parents=True)
+    try:
+        with zipfile.ZipFile(archive) as bundle:
+            for member in bundle.infolist():
+                member_path = Path(member.filename)
+                if member.filename.startswith("/") or ".." in member_path.parts:
+                    raise RuntimeError("checkpoint archive contains an escaped member")
+                if member.filename.endswith("/") and member.filename != ".kiln-manifest.json":
+                    raise RuntimeError("checkpoint archive contains an unsupported directory")
+                if member.filename != ".kiln-manifest.json" and (member.external_attr >> 16) & 0o170000 != 0o100000:
+                    raise RuntimeError("checkpoint archive contains a non-regular member")
+            bundle.extractall(temporary)
+        if _digest(json.loads((temporary / ".kiln-manifest.json").read_text(encoding="utf-8"))) != checkpoint.specimen_hash:
+            raise RuntimeError("checkpoint manifest does not match identity")
+        os.replace(temporary, destination)
+        with destination.parent.open(".", "r") as directory:
+            os.fsync(directory.fileno())
+    except Exception:
+        shutil.rmtree(temporary, ignore_errors=True)
+        raise
     return _digest(_manifest(destination))
 
 
@@ -94,6 +120,8 @@ def _checkpoint(path: Path, specimen: Path, *, parent: str | None, source_hash: 
         "specimen_hash": specimen_hash,
         "parameters_hash": parameters_hash,
         "phase": phase,
+        "snapshot_path": str(snapshot_path),
+        "snapshot_hash": snapshot_hash,
     })[:24].upper()
     result = Checkpoint(checkpoint_id, parent, source_hash, specimen_hash,
                         parameters_hash, phase, str(snapshot_path), snapshot_hash)
@@ -104,6 +132,8 @@ def _checkpoint(path: Path, specimen: Path, *, parent: str | None, source_hash: 
         handle.flush()
         os.fsync(handle.fileno())
     os.replace(temporary, path)
+    with path.parent.open(".", "r") as directory:
+        os.fsync(directory.fileno())
     return result
 
 
@@ -119,6 +149,8 @@ def verify_checkpoint(path: Path, expected_parameters: dict | None = None) -> Ch
         "specimen_hash": result.specimen_hash,
         "parameters_hash": result.parameters_hash,
         "phase": result.phase,
+        "snapshot_path": result.snapshot_path,
+        "snapshot_hash": result.snapshot_hash,
     })[:24].upper()
     if result.checkpoint_id != expected_id:
         raise RuntimeError("checkpoint identity is tampered")
@@ -127,6 +159,18 @@ def verify_checkpoint(path: Path, expected_parameters: dict | None = None) -> Ch
     if not Path(result.snapshot_path).is_file() or hashlib.sha256(Path(result.snapshot_path).read_bytes()).hexdigest() != result.snapshot_hash:
         raise RuntimeError("checkpoint snapshot is missing or tampered")
     return result
+
+
+def _safe_target(specimen: Path, relative_path: str) -> Path:
+    candidate = Path(relative_path)
+    if candidate.is_absolute() or ".." in candidate.parts:
+        raise RuntimeError("repair target must be a relative path without parent traversal")
+    target = (specimen / candidate).resolve()
+    if not target.is_relative_to(specimen):
+        raise RuntimeError("repair target escaped specimen")
+    if target.is_symlink():
+        raise RuntimeError("repair target may not be a symlink")
+    return target
 
 
 def _run_oracle(specimen: Path, command: list[str]) -> None:
@@ -145,17 +189,19 @@ def repair_and_replay(
     specimen = Path(specimen).resolve()
     if parameters.get("repair_budget") != 1:
         raise RuntimeError("bounded repair slice requires exactly one repair budget")
-    source_path = specimen / candidate.relative_path
+    source_path = _safe_target(specimen, candidate.relative_path)
     original_bytes = source_path.read_bytes()
     source_hash = file_hash(source_path)
     _run_oracle(specimen, oracle)
+    bound_parameters = dict(parameters)
+    bound_parameters.update({"oracle": list(oracle), "candidate": asdict(candidate)})
     baseline = _checkpoint(
         checkpoint_root / "baseline.json",
         specimen,
         parent=None,
         source_hash=source_hash,
         specimen_hash=_digest({candidate.relative_path: source_hash}),
-        parameters=parameters,
+        parameters=bound_parameters,
         phase="BASELINE",
     )
 
@@ -169,7 +215,7 @@ def repair_and_replay(
     else:
         raise RuntimeError("mutation did not fracture the fixed oracle")
 
-    path = specimen / candidate.relative_path
+    path = _safe_target(specimen, candidate.relative_path)
     mutated_bytes = path.read_bytes()
     lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
     line_index = candidate.line - 1
@@ -194,7 +240,7 @@ def repair_and_replay(
         parent=baseline.checkpoint_id,
         source_hash=source_hash,
         specimen_hash=_digest({candidate.relative_path: file_hash(path)}),
-        parameters=parameters,
+        parameters=bound_parameters,
         phase="REPAIRED_REPLAY",
     )
     if _restore_snapshot(baseline, checkpoint_root / "baseline-restore") != baseline.specimen_hash:
@@ -216,7 +262,7 @@ def repair_under_same_oracle(
     specimen = Path(specimen).resolve()
     if parameters.get("repair_budget") != 1:
         raise RuntimeError("bounded repair slice requires exactly one repair budget")
-    path = specimen / repair.relative_path
+    path = _safe_target(specimen, repair.relative_path)
     original_bytes = path.read_bytes()
     source_hash = file_hash(path)
     _run_oracle(specimen, regression_oracle)
@@ -226,13 +272,19 @@ def repair_under_same_oracle(
         pass
     else:
         raise RuntimeError("adverse oracle did not establish a failure")
+    bound_parameters = dict(parameters)
+    bound_parameters.update({
+        "regression_oracle": list(regression_oracle),
+        "adverse_oracle": list(adverse_oracle),
+        "repair": asdict(repair),
+    })
     baseline = _checkpoint(
         checkpoint_root / "baseline.json",
         specimen,
         parent=None,
         source_hash=source_hash,
         specimen_hash=_digest({repair.relative_path: source_hash}),
-        parameters=parameters,
+        parameters=bound_parameters,
         phase="BASELINE",
     )
 
@@ -254,7 +306,7 @@ def repair_under_same_oracle(
         parent=baseline.checkpoint_id,
         source_hash=source_hash,
         specimen_hash=_digest({repair.relative_path: file_hash(path)}),
-        parameters=parameters,
+        parameters=bound_parameters,
         phase="REPAIRED_REPLAY",
     )
     if _restore_snapshot(baseline, checkpoint_root / "baseline-restore") != baseline.specimen_hash:
