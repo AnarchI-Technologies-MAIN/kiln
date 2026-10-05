@@ -14,7 +14,16 @@ class ValidateKilnEvidenceTests(unittest.TestCase):
         proof.write_text(json.dumps({
             "schema": "kiln.proof-metadata-aggregate.v1",
             "proof_evidence_version": "KILN-PROOF-EVIDENCE-3",
-            "trials": [{"mutation_id": "m1", "metadata": {}} for _ in range(2)],
+            "trials": [
+                {"pass_number": 1, "mutation_id": "m1", "metadata": {
+                    "schema": "kiln.proof-metadata.v2",
+                    "proof_metadata_version": "KILN-PROOF-METADATA-2",
+                }},
+                {"pass_number": 2, "mutation_id": "m2", "metadata": {
+                    "schema": "kiln.proof-metadata.v2",
+                    "proof_metadata_version": "KILN-PROOF-METADATA-2",
+                }},
+            ],
         }) + "\n", encoding="utf-8")
         result = {
             "source_commit": self.sha,
