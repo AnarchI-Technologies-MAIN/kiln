@@ -82,8 +82,10 @@ def _restore_snapshot(checkpoint: Checkpoint, destination: Path) -> str:
 
 def _checkpoint(path: Path, specimen: Path, *, parent: str | None, source_hash: str,
                 specimen_hash: str, parameters: dict, phase: str) -> Checkpoint:
-    parameters_hash = _digest(parameters)
     snapshot_path = path.with_suffix(".zip")
+    if path.exists() or snapshot_path.exists():
+        raise RuntimeError("checkpoint path already exists")
+    parameters_hash = _digest(parameters)
     tree_hash, snapshot_hash = _snapshot(specimen, snapshot_path)
     specimen_hash = tree_hash
     checkpoint_id = "KILN-CHECKPOINT-" + _digest({
@@ -95,8 +97,6 @@ def _checkpoint(path: Path, specimen: Path, *, parent: str | None, source_hash: 
     })[:24].upper()
     result = Checkpoint(checkpoint_id, parent, source_hash, specimen_hash,
                         parameters_hash, phase, str(snapshot_path), snapshot_hash)
-    if path.exists():
-        raise RuntimeError("checkpoint path already exists")
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
     with temporary.open("w", encoding="utf-8", newline="\n") as handle:
