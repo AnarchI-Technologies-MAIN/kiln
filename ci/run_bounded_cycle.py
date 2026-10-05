@@ -38,7 +38,18 @@ def main() -> int:
         json.dumps(asdict(finalized), sort_keys=True, default=str, indent=2) + "\n",
         encoding="utf-8",
     )
-    print(json.dumps(asdict(finalized), sort_keys=True, default=str))
+    print(json.dumps({
+        "schema": "kiln.sanitized-cycle-summary.v1",
+        "cycle_id": finalized.cycle_id,
+        "source_commit": finalized.source_commit,
+        "adapter": finalized.adapter,
+        "passes_requested": finalized.passes_requested,
+        "passes_executed": finalized.passes_executed,
+        "fractures_observed": finalized.fractures_observed,
+        "survivors_observed": finalized.survivors_observed,
+        "execution_failures": finalized.execution_failures,
+        "disposition": finalized.disposition,
+    }, sort_keys=True))
     return 0 if finalized.disposition in {"CYCLE_COMPLETE", "FRACTURE_EVIDENCE_PRODUCED", "BOUNDED_STABILITY_OBSERVED"} else 1
 
 

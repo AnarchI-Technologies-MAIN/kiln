@@ -207,6 +207,34 @@ class RepairLineageTests(unittest.TestCase):
             self.assertEqual(receipt["successor"]["parent_checkpoint_id"], receipt["baseline"]["checkpoint_id"])
             self.assertTrue((checkpoint_root / "successor-restore" / "gate.py").is_file())
 
+    def test_adverse_exit_must_match_declared_contract(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._fixture(root, "def enabled(value):\n    return value != True\n")
+            with self.assertRaisesRegex(RuntimeError, "expected assertion failure"):
+                run_bounded_repair_lineage(
+                    root,
+                    RepairSpec("gate.py", 2, 17, "!=", "=="),
+                    [sys.executable, "-c", "import runpy; assert isinstance(runpy.run_path('gate.py')['enabled'](True), bool)"],
+                    [sys.executable, "-c", "raise SystemExit(2)"],
+                    root.parent / (root.name + "-bad-exit"),
+                    {"repair_budget": 1, "expected_adverse_exit_code": 1},
+                )
+
+    def test_oracle_launch_failure_is_not_repair_evidence(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._fixture(root, "def enabled(value):\n    return value != True\n")
+            with self.assertRaisesRegex(RuntimeError, "launch failure"):
+                run_bounded_repair_lineage(
+                    root,
+                    RepairSpec("gate.py", 2, 17, "!=", "=="),
+                    [str(root / "missing-oracle")],
+                    [sys.executable, "-c", "raise SystemExit(1)"],
+                    root.parent / (root.name + "-launch-failure"),
+                    {"repair_budget": 1},
+                )
+
     def test_interrupted_snapshot_leaves_recoverable_orphan(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

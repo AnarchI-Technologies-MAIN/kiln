@@ -225,10 +225,16 @@ def _safe_target(specimen: Path, relative_path: str) -> Path:
     return target
 
 
-def _run_oracle(specimen: Path, command: list[str]) -> None:
-    result = subprocess.run(command, cwd=specimen, capture_output=True, text=True, timeout=30)
-    if result.returncode:
-        raise RuntimeError(f"oracle failed: {result.returncode}")
+def _run_oracle(specimen: Path, command: list[str], *, allow_failure: bool = False):
+    try:
+        result = subprocess.run(command, cwd=specimen, capture_output=True, text=True, timeout=30)
+        if result.returncode and not allow_failure:
+            raise RuntimeError(f"oracle failed: {result.returncode}")
+        return result
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("oracle timeout") from exc
+    except OSError as exc:
+        raise RuntimeError("oracle launch failure") from exc
 
 
 def _oracle_hashes(specimen: Path, oracle_files: tuple[str, ...]) -> dict[str, str]:
@@ -278,13 +284,18 @@ def run_bounded_repair_lineage(
     if _restore_snapshot(baseline, repair_root) != baseline.specimen_hash:
         raise RuntimeError("baseline restore before repair failed")
     frozen_oracles = _oracle_hashes(repair_root, oracle_files)
-    _run_oracle(repair_root, regression_oracle)
-    try:
-        _run_oracle(repair_root, adverse_oracle)
-    except RuntimeError as error:
-        if "oracle failed:" not in str(error):
-            raise RuntimeError("adverse oracle infrastructure failure") from error
-    else:
+    regression = _run_oracle(repair_root, regression_oracle)
+    _assert_oracle_unchanged(repair_root, frozen_oracles)
+    adverse = _run_oracle(repair_root, adverse_oracle, allow_failure=True)
+    _assert_oracle_unchanged(repair_root, frozen_oracles)
+    expected_exit = parameters.get("expected_adverse_exit_code", 1)
+    expected_marker = parameters.get("expected_adverse_marker")
+    if regression.returncode != 0:
+        raise RuntimeError("regression oracle infrastructure or baseline failure")
+    if adverse.returncode != expected_exit or (
+        expected_marker is not None
+        and expected_marker not in (adverse.stdout or "") + (adverse.stderr or "")
+    ):
         raise RuntimeError("adverse oracle did not establish an expected assertion failure")
     target = _safe_target(repair_root, repair.relative_path)
     if repair.relative_path in oracle_files:
@@ -300,8 +311,12 @@ def run_bounded_repair_lineage(
     lines[index] = line[:repair.column] + repair.replacement_token + line[end:]
     target.write_text("".join(lines), encoding="utf-8", newline="")
     _assert_oracle_unchanged(repair_root, frozen_oracles)
-    _run_oracle(repair_root, regression_oracle)
-    _run_oracle(repair_root, adverse_oracle)
+    if _run_oracle(repair_root, regression_oracle).returncode != 0:
+        raise RuntimeError("repaired regression oracle failed")
+    _assert_oracle_unchanged(repair_root, frozen_oracles)
+    if _run_oracle(repair_root, adverse_oracle).returncode != 0:
+        raise RuntimeError("repaired adverse oracle failed")
+    _assert_oracle_unchanged(repair_root, frozen_oracles)
     successor = _checkpoint(
         Path(checkpoint_root) / "successor.json",
         repair_root,

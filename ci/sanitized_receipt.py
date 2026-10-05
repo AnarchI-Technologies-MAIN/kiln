@@ -44,6 +44,7 @@ def build_receipt(result: dict, source_repository: str, source_head_sha: str, so
     receipt = {
         "schema": RECEIPT_SCHEMA,
         "receipt_version": 1,
+        "qualification_status": "pending_final_controller_gates",
         "source_repository": source_repository,
         "source_head_sha": source_head_sha,
         "source_base_sha": source_base_sha,
