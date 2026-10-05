@@ -59,9 +59,26 @@ def validate(evidence_root: Path, expected_source_commit: str, requested_passes:
     if result["disposition"] not in COMPLETED_DISPOSITIONS:
         raise ValueError(f"non-completed disposition: {result['disposition']}")
 
-    proof_path = Path(result["proof_metadata_path"])
+    evidence_root = evidence_root.resolve()
+    proof_path = Path(result["proof_metadata_path"]).resolve()
+    if not proof_path.is_relative_to(evidence_root):
+        raise ValueError("proof metadata path escaped evidence root")
     if not proof_path.is_file() or proof_path.stat().st_size == 0:
         raise ValueError("missing or empty proof metadata")
+    try:
+        proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("proof metadata is not valid JSON") from exc
+    if proof.get("schema") != "kiln.proof-metadata-aggregate.v1":
+        raise ValueError("proof metadata schema is invalid")
+    if proof.get("proof_evidence_version") != "KILN-PROOF-EVIDENCE-3":
+        raise ValueError("proof metadata version is invalid")
+    trials = proof.get("trials")
+    if not isinstance(trials, list) or len(trials) != result["passes_executed"]:
+        raise ValueError("proof metadata trial count does not match execution")
+    for trial in trials:
+        if not isinstance(trial, dict) or not trial.get("mutation_id") or not isinstance(trial.get("metadata"), dict):
+            raise ValueError("proof metadata contains an invalid trial")
 
     return {
         "qualified": True,
@@ -87,5 +104,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 
