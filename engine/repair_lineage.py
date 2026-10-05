@@ -52,6 +52,17 @@ def _checkpoint(path: Path, *, parent: str | None, source_hash: str,
     return result
 
 
+def verify_checkpoint(path: Path, expected_parameters: dict | None = None) -> Checkpoint:
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+        result = Checkpoint(**payload)
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError("checkpoint is malformed") from exc
+    if expected_parameters is not None and result.parameters_hash != _digest(expected_parameters):
+        raise RuntimeError("checkpoint parameters are stale")
+    return result
+
+
 def _run_oracle(specimen: Path, command: list[str]) -> None:
     result = subprocess.run(command, cwd=specimen, capture_output=True, text=True)
     if result.returncode:
@@ -66,6 +77,8 @@ def repair_and_replay(
     parameters: dict,
 ) -> tuple[Checkpoint, Checkpoint]:
     specimen = Path(specimen).resolve()
+    if parameters.get("repair_budget") != 1:
+        raise RuntimeError("bounded repair slice requires exactly one repair budget")
     source_path = specimen / candidate.relative_path
     original_bytes = source_path.read_bytes()
     source_hash = file_hash(source_path)
