@@ -47,11 +47,16 @@ jobs:
           SOURCE_REPOSITORY: ${{ inputs.source_repository }}
           AUTHORIZATION_ACTOR: ${{ inputs.authorization_actor }}
           AUTHORIZATION_METHOD: ${{ inputs.authorization_method }}
+          EXPECTED_KILN_REF: a4c304acb5f3ffbd005d8515928b04ebdb261d1c
+          INPUT_KILN_REF: ${{ inputs.kiln_ref }}
+          CALLER_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
           test "$SOURCE_REPOSITORY" = "AnarchI-Technologies-MAIN/AnarchI-Brain"
           test "$AUTHORIZATION_ACTOR" = "alexander-gudde"
           test "$AUTHORIZATION_METHOD" = "owner_exact_sha_dispatch"
+          test "$CALLER_ACTOR" = "$AUTHORIZATION_ACTOR"
+          test "$INPUT_KILN_REF" = "$EXPECTED_KILN_REF"
 
       - name: Checkout exact first-party source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -93,6 +98,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m venv "$RUNNER_TEMP/kiln-venv"
+          "$RUNNER_TEMP/kiln-venv/bin/python" --version
           "$RUNNER_TEMP/kiln-venv/bin/python" -m pip install --disable-pip-version-check jsonschema==4.26.0
           "$RUNNER_TEMP/kiln-venv/bin/python" kiln-runtime/ci/run_bounded_cycle.py             --target "$GITHUB_WORKSPACE/specimen"             --adapter python --entry ci             --max-passes ${{ inputs.max_passes }}             --workers 1 --until ${{ inputs.until }}             --session-root "$RUNNER_TEMP/kiln-session"             --output "$RUNNER_TEMP/kiln-session/cycle-result.json"
           "$RUNNER_TEMP/kiln-venv/bin/python" kiln-runtime/ci/validate_kiln_evidence.py             --evidence-root "$RUNNER_TEMP/kiln-session"             --expected-source-commit "${{ inputs.source_head_sha }}"             --requested-passes "${{ inputs.max_passes }}"
