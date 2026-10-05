@@ -48,7 +48,7 @@ class RepairLineageTests(unittest.TestCase):
             baseline, repaired = repair_and_replay(
                 root,
                 candidate,
-                ["python", "-c", "import sys; sys.path.insert(0, '.'); from gate import enabled; assert enabled(True) is True"],
+                ["python", "-c", "import runpy; assert runpy.run_path('gate.py')['enabled'](True) is True"],
                 root.parent / (root.name + "-checkpoints"),
                 {"candidate_id": candidate.mutation_id, "oracle": "unittest:tests", "repair_budget": 1},
             )
@@ -79,8 +79,8 @@ class RepairLineageTests(unittest.TestCase):
             )
             subprocess.run(["git", "add", "."], cwd=root, check=True)
             subprocess.run(["git", "commit", "-qm", "baseline"], cwd=root, check=True)
-            regression = ["python", "-c", "import sys; sys.path.insert(0, '.'); from gate import enabled; assert isinstance(enabled(True), bool)"]
-            adverse = ["python", "-c", "from gate import enabled; assert enabled(True) is True"]
+            regression = ["python", "-c", "import runpy; assert isinstance(runpy.run_path('gate.py')['enabled'](True), bool)"]
+            adverse = ["python", "-c", "import runpy; assert runpy.run_path('gate.py')['enabled'](True) is True"]
             baseline, repaired = repair_under_same_oracle(
                 root,
                 RepairSpec("gate.py", 2, 17, "!=", "=="),
@@ -116,9 +116,9 @@ class RepairLineageTests(unittest.TestCase):
             candidate = next(c for c in discover_python_mutations(root) if c.original_token == "==")
             from dataclasses import replace
             with self.assertRaisesRegex(RuntimeError, "mutation token no longer matches"):
-                repair_and_replay(root, replace(candidate, original_token="!="), ["python", "-c", "import sys; sys.path.insert(0, '.'); from gate import enabled; assert enabled(True) is True"], root.parent / (root.name + "-wrong"), {"repair_budget": 1})
+                repair_and_replay(root, replace(candidate, original_token="!="), ["python", "-c", "import runpy; assert runpy.run_path('gate.py')['enabled'](True) is True"], root.parent / (root.name + "-wrong"), {"repair_budget": 1})
             with self.assertRaisesRegex(RuntimeError, "exactly one"):
-                repair_and_replay(root, candidate, ["python", "-c", "import sys; sys.path.insert(0, '.'); from gate import enabled; assert enabled(True) is True"], root.parent / (root.name + "-budget"), {"repair_budget": 0})
+                repair_and_replay(root, candidate, ["python", "-c", "import runpy; assert runpy.run_path('gate.py')['enabled'](True) is True"], root.parent / (root.name + "-budget"), {"repair_budget": 0})
 
 
 if __name__ == "__main__":
