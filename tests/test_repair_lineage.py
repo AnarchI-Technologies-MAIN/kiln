@@ -14,6 +14,7 @@ from engine.repair_lineage import (
     _restore_snapshot,
     repair_and_replay,
     repair_under_same_oracle,
+    run_bounded_repair_lineage,
     verify_checkpoint,
 )
 
@@ -168,6 +169,42 @@ class RepairLineageTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(RuntimeError, "duplicate members"):
                 _restore_snapshot(checkpoint, root / "destination")
+
+    def test_operational_entrypoint_restores_repairs_replays_and_restores_successor(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._fixture(root, "def enabled(value):\n    return value != True\n")
+            repair = RepairSpec("gate.py", 2, 17, "!=", "==")
+            regression = ["python", "-c", "import runpy; assert isinstance(runpy.run_path('gate.py')['enabled'](True), bool)"]
+            adverse = ["python", "-c", "import runpy; assert runpy.run_path('gate.py')['enabled'](True) is True"]
+            baseline, successor = run_bounded_repair_lineage(
+                root,
+                repair,
+                regression,
+                adverse,
+                root.parent / (root.name + "-operational"),
+                {"repair_budget": 1},
+            )
+            self.assertEqual(successor.parent_checkpoint_id, baseline.checkpoint_id)
+            self.assertEqual(successor.phase, "REPAIRED_REPLAY")
+
+    def test_interrupted_snapshot_leaves_recoverable_orphan(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "gate.py").write_text("ok\n", encoding="utf-8")
+            checkpoint_root = root / "checkpoints"
+            from engine.repair_lineage import _checkpoint
+            with self.assertRaisesRegex(RuntimeError, "fault injected"):
+                _checkpoint(
+                    checkpoint_root / "baseline.json", root, parent=None,
+                    source_hash="source", specimen_hash="", parameters={"fault_inject": "after_archive_fsync"}, phase="BASELINE",
+                )
+            self.assertTrue((checkpoint_root / "baseline.zip.tmp").is_file())
+            result = _checkpoint(
+                checkpoint_root / "baseline.json", root, parent=None,
+                source_hash="source", specimen_hash="", parameters={}, phase="BASELINE",
+            )
+            self.assertTrue(Path(result.snapshot_path).is_file())
 
 
 if __name__ == "__main__":

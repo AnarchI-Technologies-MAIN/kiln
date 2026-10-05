@@ -30,6 +30,7 @@ def validate(evidence_root: Path, expected_source_commit: str, requested_passes:
         "baseline_passed",
         "mutation_candidate_count",
         "passes_requested",
+        "until",
         "passes_executed",
         "execution_failures",
         "specimen_removed",
@@ -59,11 +60,16 @@ def validate(evidence_root: Path, expected_source_commit: str, requested_passes:
         raise ValueError("no mutation candidate was executed")
     if result["passes_requested"] != requested_passes:
         raise ValueError("cycle requested-pass count does not match the gate")
-    if result["passes_executed"] < 1 or (
-        result["passes_executed"] != requested_passes
-        and result["disposition"] != "FRACTURE_EVIDENCE_PRODUCED"
-    ):
+    if result["until"] not in {"stable", "fracture", "adjudication"}:
+        raise ValueError("cycle stopping policy is invalid")
+    if result["passes_executed"] < 1 or result["passes_executed"] > requested_passes:
         raise ValueError("cycle did not execute every requested pass")
+    if result["until"] == "stable" and result["passes_executed"] != requested_passes:
+        raise ValueError("stable cycle did not execute every requested pass")
+    if result["passes_executed"] != requested_passes and result["until"] != "fracture":
+        raise ValueError("early stop is not authorized by the stopping policy")
+    if result["passes_executed"] != requested_passes and result["disposition"] != "FRACTURE_EVIDENCE_PRODUCED":
+        raise ValueError("early stop lacks a justified fracture disposition")
     if result["execution_failures"] != 0:
         raise ValueError("cycle reported execution failures")
     if result["specimen_removed"] is not True:

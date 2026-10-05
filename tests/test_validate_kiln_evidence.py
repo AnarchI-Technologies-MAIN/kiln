@@ -50,6 +50,7 @@ class ValidateKilnEvidenceTests(unittest.TestCase):
             "baseline_passed": True,
             "mutation_candidate_count": 1,
             "passes_requested": 2,
+            "until": "stable",
             "passes_executed": 2,
             "execution_failures": 0,
             "specimen_removed": True,

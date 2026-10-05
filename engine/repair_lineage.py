@@ -77,7 +77,7 @@ def _fsync_directory(directory: Path) -> None:
         os.close(directory_fd)
 
 
-def _snapshot(specimen: Path, archive: Path) -> tuple[str, str]:
+def _snapshot(specimen: Path, archive: Path, *, fault_inject: bool = False) -> tuple[str, str]:
     manifest = _manifest(specimen)
     archive.parent.mkdir(parents=True, exist_ok=True)
     temporary = archive.with_suffix(archive.suffix + ".tmp")
@@ -93,6 +93,8 @@ def _snapshot(specimen: Path, archive: Path) -> tuple[str, str]:
         os.fsync(archive_fd)
     finally:
         os.close(archive_fd)
+    if fault_inject:
+        raise RuntimeError("fault injected during snapshot publication")
     os.replace(temporary, archive)
     _fsync_directory(archive.parent)
     return _digest(manifest), hashlib.sha256(archive.read_bytes()).hexdigest()
@@ -155,7 +157,11 @@ def _checkpoint(path: Path, specimen: Path, *, parent: str | None, source_hash: 
     if path.exists() or snapshot_path.exists():
         raise RuntimeError("checkpoint path already exists")
     parameters_hash = _digest(parameters)
-    tree_hash, snapshot_hash = _snapshot(specimen, snapshot_path)
+    tree_hash, snapshot_hash = _snapshot(
+        specimen,
+        snapshot_path,
+        fault_inject=parameters.get("fault_inject") == "after_archive_fsync",
+    )
     specimen_hash = tree_hash
     checkpoint_id = "KILN-CHECKPOINT-" + _digest({
         "parent": parent,
@@ -216,9 +222,102 @@ def _safe_target(specimen: Path, relative_path: str) -> Path:
 
 
 def _run_oracle(specimen: Path, command: list[str]) -> None:
-    result = subprocess.run(command, cwd=specimen, capture_output=True, text=True)
+    result = subprocess.run(command, cwd=specimen, capture_output=True, text=True, timeout=30)
     if result.returncode:
         raise RuntimeError(f"oracle failed: {result.returncode}")
+
+
+def _oracle_hashes(specimen: Path, oracle_files: tuple[str, ...]) -> dict[str, str]:
+    hashes = {}
+    for relative in oracle_files:
+        path = _safe_target(specimen, relative)
+        if not path.is_file() or path.is_symlink():
+            raise RuntimeError("oracle file must be a regular file")
+        hashes[relative] = file_hash(path)
+    return hashes
+
+
+def _assert_oracle_unchanged(specimen: Path, frozen: dict[str, str]) -> None:
+    if _oracle_hashes(specimen, tuple(frozen)) != frozen:
+        raise RuntimeError("oracle file changed during repair")
+
+
+def run_bounded_repair_lineage(
+    specimen: Path,
+    repair: RepairSpec,
+    regression_oracle: list[str],
+    adverse_oracle: list[str],
+    checkpoint_root: Path,
+    parameters: dict,
+    oracle_files: tuple[str, ...] = (),
+) -> tuple[Checkpoint, Checkpoint]:
+    """Operational one-repair lineage: restore, repair, replay, and verify."""
+    if parameters.get("repair_budget") != 1:
+        raise RuntimeError("bounded repair slice requires exactly one repair budget")
+    specimen = Path(specimen).resolve()
+    baseline = _checkpoint(
+        Path(checkpoint_root) / "baseline.json",
+        specimen,
+        parent=None,
+        source_hash=file_hash(_safe_target(specimen, repair.relative_path)),
+        specimen_hash="",
+        parameters={
+            **parameters,
+            "regression_oracle": list(regression_oracle),
+            "adverse_oracle": list(adverse_oracle),
+            "repair": asdict(repair),
+            "oracle_files": list(oracle_files),
+        },
+        phase="BASELINE",
+    )
+    repair_root = Path(checkpoint_root) / "repair-input"
+    if _restore_snapshot(baseline, repair_root) != baseline.specimen_hash:
+        raise RuntimeError("baseline restore before repair failed")
+    frozen_oracles = _oracle_hashes(repair_root, oracle_files)
+    _run_oracle(repair_root, regression_oracle)
+    try:
+        _run_oracle(repair_root, adverse_oracle)
+    except RuntimeError as error:
+        if "oracle failed:" not in str(error):
+            raise RuntimeError("adverse oracle infrastructure failure") from error
+    else:
+        raise RuntimeError("adverse oracle did not establish an expected assertion failure")
+    target = _safe_target(repair_root, repair.relative_path)
+    if repair.relative_path in oracle_files:
+        raise RuntimeError("repair target is an oracle file")
+    lines = target.read_text(encoding="utf-8").splitlines(keepends=True)
+    index = repair.line - 1
+    if index < 0 or index >= len(lines):
+        raise RuntimeError("repair line exceeds specimen")
+    line = lines[index]
+    end = repair.column + len(repair.expected_token)
+    if line[repair.column:end] != repair.expected_token:
+        raise RuntimeError("repair token no longer matches specimen")
+    lines[index] = line[:repair.column] + repair.replacement_token + line[end:]
+    target.write_text("".join(lines), encoding="utf-8", newline="")
+    _assert_oracle_unchanged(repair_root, frozen_oracles)
+    _run_oracle(repair_root, regression_oracle)
+    _run_oracle(repair_root, adverse_oracle)
+    successor = _checkpoint(
+        Path(checkpoint_root) / "successor.json",
+        repair_root,
+        parent=baseline.checkpoint_id,
+        source_hash=file_hash(target),
+        specimen_hash="",
+        parameters={
+            **parameters,
+            "regression_oracle": list(regression_oracle),
+            "adverse_oracle": list(adverse_oracle),
+            "repair": asdict(repair),
+            "oracle_files": list(oracle_files),
+        },
+        phase="REPAIRED_REPLAY",
+    )
+    if _restore_snapshot(successor, Path(checkpoint_root) / "successor-restore") != successor.specimen_hash:
+        raise RuntimeError("successor restore verification failed")
+    if _restore_snapshot(baseline, Path(checkpoint_root) / "baseline-restore") != baseline.specimen_hash:
+        raise RuntimeError("baseline restore verification failed")
+    return baseline, successor
 
 
 def repair_and_replay(
