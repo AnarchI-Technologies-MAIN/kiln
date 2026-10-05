@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from engine.mutation_executor import discover_python_mutations
-from repair_lineage import repair_and_replay, verify_checkpoint
+from engine.repair_lineage import repair_and_replay, verify_checkpoint
 
 
 class RepairLineageTests(unittest.TestCase):
