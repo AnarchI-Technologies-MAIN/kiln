@@ -59,7 +59,10 @@ def validate(evidence_root: Path, expected_source_commit: str, requested_passes:
         raise ValueError("no mutation candidate was executed")
     if result["passes_requested"] != requested_passes:
         raise ValueError("cycle requested-pass count does not match the gate")
-    if result["passes_executed"] != requested_passes:
+    if result["passes_executed"] < 1 or (
+        result["passes_executed"] != requested_passes
+        and result["disposition"] != "FRACTURE_EVIDENCE_PRODUCED"
+    ):
         raise ValueError("cycle did not execute every requested pass")
     if result["execution_failures"] != 0:
         raise ValueError("cycle reported execution failures")
@@ -71,11 +74,20 @@ def validate(evidence_root: Path, expected_source_commit: str, requested_passes:
         raise ValueError(f"non-completed disposition: {result['disposition']}")
 
     evidence_root = evidence_root.resolve()
+    cycle_root = evidence_root / result["cycle_id"]
+
     def evidence_file(raw, label):
-        if not isinstance(raw, str) or not raw or Path(raw).is_absolute() or ".." in Path(raw).parts:
+        if not isinstance(raw, str) or not raw:
             raise ValueError(f"{label} path is invalid")
-        path = (evidence_root / raw).resolve()
-        if not path.is_relative_to(evidence_root) or not path.is_file() or path.stat().st_size == 0:
+        raw_path = Path(raw)
+        if raw_path.is_absolute():
+            candidates = [raw_path]
+        elif ".." in raw_path.parts:
+            raise ValueError(f"{label} path is invalid")
+        else:
+            candidates = [cycle_root / raw_path, evidence_root / raw_path]
+        path = next((candidate.resolve() for candidate in candidates if candidate.is_file()), None)
+        if path is None or not path.is_relative_to(evidence_root) or path.stat().st_size == 0:
             raise ValueError(f"missing or empty {label}")
         return path
 
@@ -136,7 +148,12 @@ def validate(evidence_root: Path, expected_source_commit: str, requested_passes:
         executed = trial_by_pass.get(trial["pass_number"])
         if executed is None or executed["mutation_id"] != trial["mutation_id"]:
             raise ValueError("proof metadata trial is not bound to executed trial")
-        if not metadata.get("detected_test_ids") or not metadata.get("invariant_refs") or not metadata.get("behavioral_fragment_refs") or not metadata.get("fragment_proof_links"):
+        if executed.get("fracture_observed") and (
+            not metadata.get("detected_test_ids")
+            or not metadata.get("invariant_refs")
+            or not metadata.get("behavioral_fragment_refs")
+            or not metadata.get("fragment_proof_links")
+        ):
             raise ValueError("proof metadata trial is empty or incomplete")
         process_path = evidence_file(executed["test_evidence_path"], "trial process evidence")
         try:

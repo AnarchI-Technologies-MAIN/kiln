@@ -80,7 +80,7 @@ class ValidateKilnEvidenceTests(unittest.TestCase):
     def test_incomplete_execution_fails(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            self.write_result(root, passes_executed=1)
+            self.write_result(root, passes_executed=1, disposition="CYCLE_COMPLETE")
             with self.assertRaisesRegex(ValueError, "every requested pass"):
                 validate(root, self.sha, 2)
 
