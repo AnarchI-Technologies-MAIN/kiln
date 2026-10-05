@@ -1098,6 +1098,7 @@ def run_cycle(
             baseline_evidence_path=baseline.evidence_path,
             mutation_candidate_count=len(candidates),
             passes_requested=max_passes,
+            until=until,
             passes_executed=0,
             workers_requested=workers,
             workers_used=workers_used,

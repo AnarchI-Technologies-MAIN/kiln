@@ -154,14 +154,18 @@ def _restore_snapshot(checkpoint: Checkpoint, destination: Path) -> str:
 def _checkpoint(path: Path, specimen: Path, *, parent: str | None, source_hash: str,
                 specimen_hash: str, parameters: dict, phase: str) -> Checkpoint:
     snapshot_path = path.with_suffix(".zip")
-    if path.exists() or snapshot_path.exists():
+    if path.exists():
         raise RuntimeError("checkpoint path already exists")
+    if snapshot_path.exists():
+        snapshot_path.unlink()
     parameters_hash = _digest(parameters)
     tree_hash, snapshot_hash = _snapshot(
         specimen,
         snapshot_path,
         fault_inject=parameters.get("fault_inject") == "after_archive_fsync",
     )
+    if parameters.get("fault_inject") == "after_archive_publish":
+        raise RuntimeError("fault injected after archive publication")
     specimen_hash = tree_hash
     checkpoint_id = "KILN-CHECKPOINT-" + _digest({
         "parent": parent,

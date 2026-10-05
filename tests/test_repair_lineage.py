@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import tempfile
 import unittest
 import hashlib
@@ -188,6 +189,24 @@ class RepairLineageTests(unittest.TestCase):
             self.assertEqual(successor.parent_checkpoint_id, baseline.checkpoint_id)
             self.assertEqual(successor.phase, "REPAIRED_REPLAY")
 
+    def test_operational_cli_entrypoint_emits_checkpoint_receipt(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._fixture(root, "def enabled(value):\n    return value != True\n")
+            repair_file = root / "repair.json"
+            repair_file.write_text(json.dumps({"relative_path": "gate.py", "line": 2, "column": 17, "expected_token": "!=", "replacement_token": "=="}), encoding="utf-8")
+            checkpoint_root = root.parent / (root.name + "-cli")
+            command = [
+                sys.executable, str(Path(__file__).parents[1] / "ci" / "run_repair_lineage.py"),
+                "--specimen", str(root), "--repair", str(repair_file), "--checkpoint-root", str(checkpoint_root),
+                "--regression-oracle-json", json.dumps([sys.executable, "-c", "import runpy; assert isinstance(runpy.run_path('gate.py')['enabled'](True), bool)"]),
+                "--adverse-oracle-json", json.dumps([sys.executable, "-c", "import runpy; assert runpy.run_path('gate.py')['enabled'](True) is True"]),
+            ]
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            receipt = json.loads(result.stdout)
+            self.assertEqual(receipt["successor"]["parent_checkpoint_id"], receipt["baseline"]["checkpoint_id"])
+            self.assertTrue((checkpoint_root / "successor-restore" / "gate.py").is_file())
+
     def test_interrupted_snapshot_leaves_recoverable_orphan(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -200,6 +219,24 @@ class RepairLineageTests(unittest.TestCase):
                     source_hash="source", specimen_hash="", parameters={"fault_inject": "after_archive_fsync"}, phase="BASELINE",
                 )
             self.assertTrue((checkpoint_root / "baseline.zip.tmp").is_file())
+            result = _checkpoint(
+                checkpoint_root / "baseline.json", root, parent=None,
+                source_hash="source", specimen_hash="", parameters={}, phase="BASELINE",
+            )
+            self.assertTrue(Path(result.snapshot_path).is_file())
+
+    def test_archive_published_before_record_is_recoverable(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "gate.py").write_text("ok\n", encoding="utf-8")
+            checkpoint_root = root / "checkpoints"
+            from engine.repair_lineage import _checkpoint
+            with self.assertRaisesRegex(RuntimeError, "after archive publication"):
+                _checkpoint(
+                    checkpoint_root / "baseline.json", root, parent=None,
+                    source_hash="source", specimen_hash="", parameters={"fault_inject": "after_archive_publish"}, phase="BASELINE",
+                )
+            self.assertTrue((checkpoint_root / "baseline.zip").is_file())
             result = _checkpoint(
                 checkpoint_root / "baseline.json", root, parent=None,
                 source_hash="source", specimen_hash="", parameters={}, phase="BASELINE",
