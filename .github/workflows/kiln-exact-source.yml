@@ -1,0 +1,165 @@
+name: Reusable Kiln Exact-Source Qualification
+
+on:
+  workflow_call:
+    inputs:
+      source_repository:
+        required: true
+        type: string
+      source_head_sha:
+        required: true
+        type: string
+      source_base_sha:
+        required: true
+        type: string
+      pull_request_number:
+        required: true
+        type: number
+      authorization_actor:
+        required: true
+        type: string
+      authorization_method:
+        required: true
+        type: string
+      kiln_ref:
+        required: true
+        type: string
+      max_passes:
+        required: false
+        default: 8
+        type: number
+      until:
+        required: false
+        default: stable
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    name: Kiln exact-source qualification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Enforce exact owner authorization
+        env:
+          SOURCE_REPOSITORY: ${{ inputs.source_repository }}
+          AUTHORIZATION_ACTOR: ${{ inputs.authorization_actor }}
+          AUTHORIZATION_METHOD: ${{ inputs.authorization_method }}
+          INPUT_KILN_REF: ${{ inputs.kiln_ref }}
+          CALLER_ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_REPOSITORY" = "AnarchI-Technologies-MAIN/AnarchI-Brain"
+          test "$AUTHORIZATION_ACTOR" = "alexander-gudde"
+          test "$AUTHORIZATION_METHOD" = "owner_exact_sha_dispatch"
+          test "$CALLER_ACTOR" = "$AUTHORIZATION_ACTOR"
+          [[ "$INPUT_KILN_REF" =~ ^[0-9a-f]{40}$ ]]
+
+      - name: Checkout exact first-party source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.source_repository }}
+          ref: ${{ inputs.source_head_sha }}
+          fetch-depth: 0
+          path: specimen
+          persist-credentials: false
+
+      - name: Verify source and base binding
+        working-directory: specimen
+        env:
+          SOURCE_HEAD_SHA: ${{ inputs.source_head_sha }}
+          SOURCE_BASE_SHA: ${{ inputs.source_base_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD_SHA"
+          git cat-file -e "$SOURCE_BASE_SHA^{commit}"
+          test -z "$(git status --porcelain)"
+
+      - name: Run source native qualification
+        working-directory: specimen
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check jsonschema==4.26.0
+          python -I -B -m unittest discover -s ci -p "test_*.py"
+
+      - name: Checkout pinned Kiln runtime
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: AnarchI-Technologies-MAIN/kiln
+          ref: ${{ inputs.kiln_ref }}
+          fetch-depth: 1
+          path: kiln-runtime
+          persist-credentials: false
+
+      - name: Verify pinned Kiln runtime identity
+        working-directory: kiln-runtime
+        env:
+          KILN_REF: ${{ inputs.kiln_ref }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$KILN_REF"
+
+      - name: Run bounded exact-source Kiln campaign
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/kiln-venv"
+          "$RUNNER_TEMP/kiln-venv/bin/python" --version
+          "$RUNNER_TEMP/kiln-venv/bin/python" -m pip install --disable-pip-version-check jsonschema==4.26.0
+          "$RUNNER_TEMP/kiln-venv/bin/python" kiln-runtime/ci/run_bounded_cycle.py             --target "$GITHUB_WORKSPACE/specimen"             --adapter python --entry ci             --max-passes ${{ inputs.max_passes }}             --workers 1 --until ${{ inputs.until }}             --session-root "$RUNNER_TEMP/kiln-session"             --output "$RUNNER_TEMP/kiln-session/cycle-result.json"
+          "$RUNNER_TEMP/kiln-venv/bin/python" kiln-runtime/ci/validate_kiln_evidence.py             --evidence-root "$RUNNER_TEMP/kiln-session"             --expected-source-commit "${{ inputs.source_head_sha }}"             --requested-passes "${{ inputs.max_passes }}"
+
+      - name: Write sanitized durable campaign receipt
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/kiln-venv/bin/python" kiln-runtime/ci/sanitized_receipt.py \
+            --result "$RUNNER_TEMP/kiln-session/cycle-result.json" \
+            --output "$RUNNER_TEMP/kiln-session/sanitized-receipt.json" \
+            --source-repository "${{ inputs.source_repository }}" \
+            --source-head-sha "${{ inputs.source_head_sha }}" \
+            --source-base-sha "${{ inputs.source_base_sha }}" \
+            --kiln-runtime-sha "${{ inputs.kiln_ref }}"
+
+      - name: Upload sanitized durable campaign receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kiln-sanitized-receipt-${{ inputs.pull_request_number }}-${{ inputs.source_head_sha }}
+          path: |
+            ${{ runner.temp }}/kiln-session/sanitized-receipt.json
+            ${{ runner.temp }}/kiln-session/sanitized-receipt.json.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Recheck source preservation
+        working-directory: specimen
+        env:
+          SOURCE_HEAD_SHA: ${{ inputs.source_head_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Publish sanitized summary
+        env:
+          CYCLE_RESULT: ${{ runner.temp }}/kiln-session/cycle-result.json
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          result = json.loads(Path(os.environ["CYCLE_RESULT"]).read_text())
+          allowed = {
+              key: result.get(key)
+              for key in (
+                  "cycle_id", "source_commit", "adapter", "baseline_passed",
+                  "mutation_candidate_count", "passes_requested",
+                  "passes_executed", "fractures_observed", "survivors_observed",
+                  "execution_failures", "specimen_removed",
+                  "original_head_preserved", "disposition",
+              )
+          }
+          print("Kiln sanitized summary: " + json.dumps(allowed, sort_keys=True))
+          PY

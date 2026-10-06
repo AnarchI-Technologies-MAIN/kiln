@@ -42,6 +42,7 @@ class CycleResult:
     baseline_evidence_path: str
     mutation_candidate_count: int
     passes_requested: int
+    until: str
     passes_executed: int
     workers_requested: int
     workers_used: int
@@ -963,6 +964,7 @@ def run_cycle(
             baseline_evidence_path=baseline.evidence_path,
             mutation_candidate_count=len(candidates),
             passes_requested=max_passes,
+            until=until,
             passes_executed=0,
             workers_requested=workers,
             workers_used=0,
@@ -1000,6 +1002,7 @@ def run_cycle(
             baseline_evidence_path=baseline.evidence_path,
             mutation_candidate_count=len(candidates),
             passes_requested=max_passes,
+            until=until,
             passes_executed=0,
             workers_requested=workers,
             workers_used=0,
@@ -1095,6 +1098,7 @@ def run_cycle(
             baseline_evidence_path=baseline.evidence_path,
             mutation_candidate_count=len(candidates),
             passes_requested=max_passes,
+            until=until,
             passes_executed=0,
             workers_requested=workers,
             workers_used=workers_used,
@@ -1143,6 +1147,7 @@ def run_cycle(
         baseline_evidence_path=baseline.evidence_path,
         mutation_candidate_count=len(candidates),
         passes_requested=max_passes,
+        until=until,
         passes_executed=len(trials),
         workers_requested=workers,
         workers_used=workers_used,
@@ -1185,6 +1190,7 @@ def finalize_cycle_result(result: CycleResult, target: str) -> CycleResult:
         baseline_evidence_path=result.baseline_evidence_path,
         mutation_candidate_count=result.mutation_candidate_count,
         passes_requested=result.passes_requested,
+        until=result.until,
         passes_executed=result.passes_executed,
         workers_requested=result.workers_requested,
         workers_used=result.workers_used,

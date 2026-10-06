@@ -1,0 +1,57 @@
+"""Run a bounded Kiln cycle without importing the legacy CLI surface."""
+from __future__ import annotations
+
+import argparse
+import json
+from dataclasses import asdict
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from engine.cycle_orchestrator import finalize_cycle_result, run_cycle
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--target", required=True)
+    parser.add_argument("--adapter", default="python")
+    parser.add_argument("--entry", required=True)
+    parser.add_argument("--max-passes", type=int, default=8)
+    parser.add_argument("--until", choices=("fracture", "stable"), default="stable")
+    parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument("--session-root", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+
+    result = run_cycle(
+        args.target,
+        args.adapter,
+        args.entry,
+        args.max_passes,
+        args.until,
+        args.session_root,
+        workers=args.workers,
+    )
+    finalized = finalize_cycle_result(result, args.target)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(
+        json.dumps(asdict(finalized), sort_keys=True, default=str, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(json.dumps({
+        "schema": "kiln.sanitized-cycle-summary.v1",
+        "cycle_id": finalized.cycle_id,
+        "source_commit": finalized.source_commit,
+        "adapter": finalized.adapter,
+        "passes_requested": finalized.passes_requested,
+        "passes_executed": finalized.passes_executed,
+        "fractures_observed": finalized.fractures_observed,
+        "survivors_observed": finalized.survivors_observed,
+        "execution_failures": finalized.execution_failures,
+        "disposition": finalized.disposition,
+    }, sort_keys=True))
+    return 0 if finalized.disposition in {"CYCLE_COMPLETE", "FRACTURE_EVIDENCE_PRODUCED", "BOUNDED_STABILITY_OBSERVED"} else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
